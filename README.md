@@ -112,6 +112,14 @@ This is a sample of un document in this container :
 }
 ```
 
+> **IMPORTANT**
+> 
+> Than you need to add new container in CosmosDB database. For now, is not >implemented in Deployment script. So you need to add it manually.
+> 
+> Add a new container in CosmosDB database : **chattokensusage**
+> With partition key : **/chatId**
+
+
 ## 2. ServiceExtensions
 
 To use this new CosmosDB container, we need to update **ServiceExtension.cs** file (in webapi/Extentions/)
