@@ -162,6 +162,7 @@ public static class CopilotChatServiceExtensions
         IStorageContext<ChatParticipant> chatParticipantStorageContext;
         //Custom
         IStorageContext<ChatTokensUsage> chatTokensUsageStorageContext;
+        IStorageContext<UserConsent> userConsentStorageContext;
 
         ChatStoreOptions chatStoreConfig = services.BuildServiceProvider().GetRequiredService<IOptions<ChatStoreOptions>>().Value;
 
@@ -175,6 +176,7 @@ public static class CopilotChatServiceExtensions
                 chatParticipantStorageContext = new VolatileContext<ChatParticipant>();
                 //Custom
                 chatTokensUsageStorageContext = new VolatileContext<ChatTokensUsage>();
+                userConsentStorageContext = new VolatileContext<UserConsent>();
                 break;
             }
 
@@ -198,6 +200,8 @@ public static class CopilotChatServiceExtensions
                 //Custom
                 chatTokensUsageStorageContext = new FileSystemContext<ChatTokensUsage>(
                                        new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_tokensusage{Path.GetExtension(fullPath)}")));
+                userConsentStorageContext = new FileSystemContext<UserConsent>(
+                                        new FileInfo(Path.Combine(directory, $"{Path.GetFileNameWithoutExtension(fullPath)}_userconsent{Path.GetExtension(fullPath)}")));
                 break;
             }
 
@@ -219,6 +223,8 @@ public static class CopilotChatServiceExtensions
                 //CUSTOM
                 chatTokensUsageStorageContext = new CosmosDbContext<ChatTokensUsage>(
                                        chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatTokensUsageContainer);
+                userConsentStorageContext = new CosmosDbContext<UserConsent>(
+                                       chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.UsersConsentContainer);
 #pragma warning restore CA2000 // Dispose objects before losing scope
                 break;
             }
@@ -236,6 +242,7 @@ public static class CopilotChatServiceExtensions
         services.AddSingleton<ChatParticipantRepository>(new ChatParticipantRepository(chatParticipantStorageContext));
         //Custom
         services.AddSingleton<ChatTokensUsageRepository>(new ChatTokensUsageRepository(chatTokensUsageStorageContext));
+        services.AddSingleton<UserConsentRepository>(new UserConsentRepository(userConsentStorageContext));
 
         return services;
     }
