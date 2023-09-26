@@ -6,7 +6,7 @@ import { FluentProvider, Subtitle1, makeStyles, shorthands, tokens } from '@flue
 import * as React from 'react';
 import { FC, useEffect } from 'react';
 import { UserSettingsMenu } from './components/header/UserSettingsMenu';
-import { BackendProbe, ChatView, Error, Loading, Login } from './components/views';
+import { BackendProbe, ChatView, Error, Loading, Login, UserConsent } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
 import { useChat, useFile } from './libs/hooks';
 import { AlertType } from './libs/models/AlertType';
@@ -53,6 +53,7 @@ enum AppState {
     LoadingChats,
     Chat,
     SigningOut,
+    UserConsent
 }
 
 const App: FC = () => {
@@ -99,14 +100,17 @@ const App: FC = () => {
                                 }),
                             );
                         }
-
                         setAppState(AppState.LoadingChats);
+                        //setAppState(AppState.UserConsent);
                     }
                 } else {
                     setAppState(AppState.LoadingChats);
+                    //setAppState(AppState.UserConsent);
                 }
             }
         }
+
+        //Check for UserConsent if not already done: appstate.userconsent
 
         if ((isAuthenticated || !AuthHelper.IsAuthAAD) && appState === AppState.LoadingChats) {
             void Promise.all([
@@ -189,7 +193,7 @@ const Chat = ({
             {appState === AppState.ProbeForBackend && (
                 <BackendProbe
                     uri={process.env.REACT_APP_BACKEND_URI as string}
-                    onBackendFound={() => {
+                    onBackendFound={() => {                        
                         if (AuthHelper.IsAuthAAD) {
                             setAppState(AppState.SettingUserInfo);
                         } else {
@@ -204,7 +208,8 @@ const Chat = ({
             {appState === AppState.ErrorLoadingUserInfo && (
                 <Error text={'Oops, something went wrong. Please try signing out and signing back in.'} />
             )}
-            {appState === AppState.LoadingChats && <Loading text="Loading Chats..." />}
+            {appState === AppState.UserConsent && <UserConsent />}
+            {appState === AppState.LoadingChats && <Loading text="Loading Chats..." />}            
             {appState === AppState.Chat && <ChatView />}
         </div>
     );

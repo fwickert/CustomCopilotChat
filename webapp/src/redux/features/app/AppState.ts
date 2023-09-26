@@ -64,10 +64,10 @@ export const Features = {
         label: 'Simplified Chat Experience',
     },
     [FeatureKeys.PluginsPlannersAndPersonas]: {
-        enabled: false,
+        enabled: true,
         label: 'Plugins & Planners & Personas',
         description: 'The Plans and Persona tabs are hidden until you turn this on',
-        inactive: true,
+        inactive: false,
     },
     [FeatureKeys.AzureContentSafety]: {
         enabled: false,

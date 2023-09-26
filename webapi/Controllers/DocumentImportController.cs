@@ -352,8 +352,8 @@ public class DocumentImportController : ControllerBase
                 documentContent = await this.ReadTxtFileAsync(formFile);
                 break;
             case SupportedFileType.Pdf:
-                documentContent = this.ReadPdfFile(formFile);
-                break;
+            //    documentContent = this.ReadPdfFile(formFile);
+              //  break;
             case SupportedFileType.Jpg:
             case SupportedFileType.Png:
             case SupportedFileType.Tiff:

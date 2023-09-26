@@ -16,7 +16,8 @@ import {
     tokens,
     Tooltip,
 } from '@fluentui/react-components';
-import { Edit24Filled, EditRegular, Map16Regular, Person16Regular } from '@fluentui/react-icons';
+//import { Edit24Filled, EditRegular, Map16Regular, Person16Regular } from '@fluentui/react-icons';
+import { Edit24Filled, EditRegular, Person16Regular } from '@fluentui/react-icons';
 import React, { useState } from 'react';
 import { useAppSelector } from '../../redux/app/hooks';
 import { RootState } from '../../redux/app/store';
@@ -28,7 +29,7 @@ import { ShareBotMenu } from './controls/ShareBotMenu';
 import { EditChatName } from './shared/EditChatName';
 import { DocumentsTab } from './tabs/DocumentsTab';
 import { PersonaTab } from './tabs/PersonaTab';
-import { PlansTab } from './tabs/PlansTab';
+//import { PlansTab } from './tabs/PlansTab';
 
 const useClasses = makeStyles({
     root: {
@@ -160,6 +161,7 @@ export const ChatWindow: React.FC = () => {
                         </Tab>
                         {features[FeatureKeys.PluginsPlannersAndPersonas].enabled && (
                             <>
+                            {/* 
                                 <Tab
                                     data-testid="plansTab"
                                     id="plans"
@@ -170,6 +172,7 @@ export const ChatWindow: React.FC = () => {
                                 >
                                     Plans
                                 </Tab>
+                            */}
                                 <Tab
                                     data-testid="personaTab"
                                     id="persona"
@@ -199,7 +202,7 @@ export const ChatWindow: React.FC = () => {
             </div>
             {selectedTab === 'chat' && <ChatRoom />}
             {selectedTab === 'documents' && <DocumentsTab />}
-            {selectedTab === 'plans' && <PlansTab />}
+            {/*{selectedTab === 'plans' && <PlansTab />}*/}
             {selectedTab === 'persona' && <PersonaTab />}
             {selectedTab !== 'chat' && (
                 <div className={classes.alerts}>

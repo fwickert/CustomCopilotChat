@@ -89,16 +89,11 @@ export const BackendProbe: FC<IData> = ({ uri, onBackendFound }) => {
                 </div>
             ) : (
                 <div className={classes.informativeView}>
-                    <Title3>Looking for your backend</Title3>
+                    <Title3>Looking for AI stuff behind the scene are up !</Title3>
                     <Spinner />
                     <Body1>
-                        This sample expects to find a Semantic Kernel service from <strong>webapi/</strong> running at{' '}
-                        <strong>{uri}</strong>
-                    </Body1>
-                    <Body1>
-                        Run your Semantic Kernel service locally using Visual Studio, Visual Studio Code or by typing
-                        the following command: <strong>dotnet run</strong>
-                    </Body1>
+                        Internal usage of a Secure ChatGPT like !
+                    </Body1>                    
                 </div>
             )}
         </>
