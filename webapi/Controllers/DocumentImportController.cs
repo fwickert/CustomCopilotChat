@@ -287,9 +287,9 @@ public class DocumentImportController : ControllerBase
             switch (fileType)
             {
                 case SupportedFileType.Txt:
-                case SupportedFileType.Pdf:
                 case SupportedFileType.Md:
                     break;
+                case SupportedFileType.Pdf:
                 case SupportedFileType.Jpg:
                 case SupportedFileType.Png:
                 case SupportedFileType.Tiff:

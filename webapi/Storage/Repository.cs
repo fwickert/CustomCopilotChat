@@ -52,7 +52,11 @@ public class Repository<T> : IRepository<T> where T : IStorageEntity
     {
         try
         {
-            callback?.Invoke(await this.FindByIdAsync(id, partition ?? id));
+            //callback?.Invoke(await this.FindByIdAsync(id, partition ?? id));
+            T? found = await this.FindByIdAsync(id, partition ?? id);
+
+            callback?.Invoke(found);
+
             return true;
         }
         catch (Exception ex) when (ex is ArgumentOutOfRangeException || ex is KeyNotFoundException)

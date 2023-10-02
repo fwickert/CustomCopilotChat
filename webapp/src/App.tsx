@@ -8,13 +8,14 @@ import { FC, useEffect } from 'react';
 import { UserSettingsMenu } from './components/header/UserSettingsMenu';
 import { BackendProbe, ChatView, Error, Loading, Login, UserConsent } from './components/views';
 import { AuthHelper } from './libs/auth/AuthHelper';
-import { useChat, useFile } from './libs/hooks';
+import { useChat, useFile, useUserConsent } from './libs/hooks';
 import { AlertType } from './libs/models/AlertType';
 import { useAppDispatch, useAppSelector } from './redux/app/hooks';
 import { RootState } from './redux/app/store';
 import { FeatureKeys } from './redux/features/app/AppState';
 import { addAlert, setActiveUserInfo, setServiceOptions } from './redux/features/app/appSlice';
 import { semanticKernelDarkTheme, semanticKernelLightTheme } from './styles';
+
 
 export const useClasses = makeStyles({
     container: {
@@ -69,6 +70,9 @@ const App: FC = () => {
     const chat = useChat();
     const file = useFile();
 
+    //Add const for user consent useUserConsent
+    const userconsent = useUserConsent();
+
     useEffect(() => {
         if (isMaintenance && appState !== AppState.ProbeForBackend) {
             setAppState(AppState.ProbeForBackend);
@@ -110,10 +114,21 @@ const App: FC = () => {
             }
         }
 
-        //Check for UserConsent if not already done: appstate.userconsent
+        if ((isAuthenticated || !AuthHelper.IsAuthAAD) && appState === AppState.UserConsent)
+        {
+            void Promise.all([
+                userconsent.getConsentAsync().then((succeeded) => {
+                if (succeeded ) {
+                    setAppState(AppState.LoadingChats);
+                }
+                }),
+            ]);
+        }
 
         if ((isAuthenticated || !AuthHelper.IsAuthAAD) && appState === AppState.LoadingChats) {
-            void Promise.all([
+            
+            void Promise.all([               
+
                 // Load all chats from memory
                 chat.loadChats().then((succeeded) => {
                     if (succeeded) {
@@ -131,6 +146,7 @@ const App: FC = () => {
                     }
                 }),
             ]);
+        
         }
 
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -208,9 +224,10 @@ const Chat = ({
             {appState === AppState.ErrorLoadingUserInfo && (
                 <Error text={'Oops, something went wrong. Please try signing out and signing back in.'} />
             )}
-            {appState === AppState.UserConsent && <UserConsent />}
             {appState === AppState.LoadingChats && <Loading text="Loading Chats..." />}            
             {appState === AppState.Chat && <ChatView />}
+            {appState === AppState.UserConsent && <UserConsent />}
+           
         </div>
     );
 };
