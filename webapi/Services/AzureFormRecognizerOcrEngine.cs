@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Azure;
 using Azure.AI.FormRecognizer;
+using Azure.AI.FormRecognizer.DocumentAnalysis;
 using Azure.AI.FormRecognizer.Models;
 using Microsoft.AspNetCore.Http;
 
@@ -25,9 +26,14 @@ public class AzureFormRecognizerOcrEngine : IOcrEngine
     public AzureFormRecognizerOcrEngine(string endpoint, AzureKeyCredential credential)
     {
         this.FormRecognizerClient = new FormRecognizerClient(new Uri(endpoint), credential);
+
+
+        this.DocumentAnalysisClient = new DocumentAnalysisClient(new Uri(endpoint), credential);
     }
 
     public FormRecognizerClient FormRecognizerClient { get; }
+
+    public DocumentAnalysisClient DocumentAnalysisClient { get; }
 
     ///<inheritdoc/>
     public async Task<string> ReadTextFromImageFileAsync(IFormFile imageFile)
@@ -38,21 +44,38 @@ public class AzureFormRecognizerOcrEngine : IOcrEngine
             imgStream.Position = 0;
 
             // Start the OCR operation
-            RecognizeContentOperation operation = await this.FormRecognizerClient.StartRecognizeContentAsync(imgStream);
+
+            //RecognizeContentOperation operation = await this.FormRecognizerClient.StartRecognizeContentAsync(imgStream);
+
+            AnalyzeDocumentOperation operation = await this.DocumentAnalysisClient.AnalyzeDocumentAsync(WaitUntil.Completed, "prebuilt-read", imgStream);
+            //AnalyzeDocumentOperation operation = await this.DocumentAnalysisClient.AnalyzeDocumentFromUriAsync(WaitUntil.Completed,"prebuilt-read",  new Uri("https://storageholaipourtous.blob.core.windows.net/test/DemoDocx.docx?sp=r&st=2023-10-02T13:44:28Z&se=2024-10-02T21:44:28Z&spr=https&sv=2022-11-02&sr=b&sig=YWV5i1OZocpUs2xAyWaA29juwMtFrdYeWg5znVhl0r4%3D"));
 
             // Wait for the result
-            Response<FormPageCollection> operationResponse = await operation.WaitForCompletionAsync();
-            FormPageCollection formPages = operationResponse.Value;
+            //Response<FormPageCollection> operationResponse = await operation.WaitForCompletionAsync();
+            Response<AnalyzeResult> operationResponse = await operation.WaitForCompletionAsync();
+            //FormPageCollection formPages = operationResponse.Value;
+            AnalyzeResult formPages = operationResponse.Value;
 
             StringBuilder text = new();
-            foreach (FormPage page in formPages)
+
+            //pour chaque paragraphe
+
+            foreach (var paragraph in formPages.Paragraphs)
             {
-                foreach (FormLine line in page.Lines)
-                {
-                    string lineText = string.Join(" ", line.Words.Select(word => word.Text));
-                    text.AppendLine(lineText);
-                }
+                text.AppendLine(paragraph.Content);
             }
+
+            ////foreach (FormPage page in formPages)
+            //foreach (DocumentPage page in formPages.Pages)
+            //{
+            //   //foreach (FormLine line in page.Lines)
+            //    foreach (DocumentLine line in page.Lines)
+            //    {
+            //        //string lineText = string.Join(" ", line.Words.Select(word => word.Text));
+            //        string lineText = string.Join(" ", line.GetWords().Select(word => word.Content));
+            //        text.AppendLine(lineText);
+            //    }
+            //}
             return text.ToString();
         }
     }

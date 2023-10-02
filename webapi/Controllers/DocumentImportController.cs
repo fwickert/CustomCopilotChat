@@ -66,7 +66,22 @@ public class DocumentImportController : ControllerBase
         /// <summary>
         /// .tif or .tiff
         /// </summary>
-        Tiff
+        Tiff,
+
+        /// <summary>
+        /// Docx
+        /// </summary>  
+        Docx,
+
+        /// <summary>
+        /// pptx
+        /// </summary>
+        Pptx,
+
+        /// <summary>
+        /// Xlsx
+        /// </summary>
+        Xlsx
     };
 
     private readonly ILogger<DocumentImportController> _logger;
@@ -290,6 +305,9 @@ public class DocumentImportController : ControllerBase
                 case SupportedFileType.Md:
                     break;
                 case SupportedFileType.Pdf:
+                case SupportedFileType.Docx:
+                case SupportedFileType.Pptx:
+                case SupportedFileType.Xlsx:
                 case SupportedFileType.Jpg:
                 case SupportedFileType.Png:
                 case SupportedFileType.Tiff:
@@ -352,8 +370,9 @@ public class DocumentImportController : ControllerBase
                 documentContent = await this.ReadTxtFileAsync(formFile);
                 break;
             case SupportedFileType.Pdf:
-            //    documentContent = this.ReadPdfFile(formFile);
-              //  break;
+            case SupportedFileType.Docx:
+            case SupportedFileType.Pptx:
+            case SupportedFileType.Xlsx:
             case SupportedFileType.Jpg:
             case SupportedFileType.Png:
             case SupportedFileType.Tiff:
@@ -510,6 +529,9 @@ public class DocumentImportController : ControllerBase
             ".TXT" => SupportedFileType.Txt,
             ".MD" => SupportedFileType.Md,
             ".PDF" => SupportedFileType.Pdf,
+            ".DOCX" => SupportedFileType.Docx,
+            ".PPTX" => SupportedFileType.Pptx,
+            ".XLSX" => SupportedFileType.Xlsx,
             ".JPG" => SupportedFileType.Jpg,
             ".JPEG" => SupportedFileType.Jpg,
             ".PNG" => SupportedFileType.Png,
