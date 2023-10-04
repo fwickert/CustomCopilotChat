@@ -30,15 +30,21 @@ export const useUserConsent = () => {
     const getConsentAsync = async () => {
         try 
         {
+            // Get SKaaS access token using AuthHelper
             const accessToken = await AuthHelper.getSKaaSAccessToken(instance, inProgress);
+            
+            // Get user consent using userConsentService
             return await userConsentService.getConsentAsync(userId, accessToken);          
 
         }
         catch (e: any)
         {
+            // If there is an error, add an error alert to the UI
             const errorMessage = `Unable to load User consent. Details: ${getErrorDetails(e)}`;
             dispatch(addAlert({ message: errorMessage, type: AlertType.Error }));            
         }
+        
+        // If there is no user consent, return null
         return null;
     };
 

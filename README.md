@@ -87,6 +87,27 @@ The original Chat Copilot use 2 concepts of memories : WorkingMemory and LongTer
    };
 ```
 
+# Documents ingestion
+
+<img src="logos.png" alt="image description" width="400">
+
+
+This custom Copilot chat use Azure intelligent Document to extract text from 
+
+## SUPPORTED FORMAT
+
+1. Microsoft Office files supported: 
+   - DOCX
+   - PPTX
+   - XLSX
+
+2. For **PDF** file, this application use Azure Intelligent Document too.
+
+
+Than, If you have image with text in your file it works with Azure Intelligent Document.
+
+On the original Copilot chat, pdf and docx are both convert ton text but only if file content texte format (not image).
+
 # Tokens Usage
 
 ## 1. ChatTokensUsageRepository and ChatTokensUsage
@@ -148,9 +169,11 @@ I update the front application to disable Plugins, Plans & Personas but I will r
 # Next Features
 
 1. Add an Azure function that will be triggered by a CosmosDB trigger to **delete vector index** in vector DB.
-2. Add a new feature to propose **3 nexts questions** that the user can ask after a bot response.
-3. Reactivate **Plugins, Plans & Personas**
-4. Add a **new plugins** to **show** how we can create and add plugins in this Copilot Chat.
+2. Add Semantic Memory for Document ingestion and Search when this framework support Postgres vectorDB.
+3. Add a new feature to propose **3 nexts questions** that the user can ask after a bot response.
+4. Reactivate **Plugins, Plans**
+5. Add a **new plugins** to **show** how we can create and add plugins in this Copilot Chat.
+6. Use Postgres for documents in chat session and Azure cognitive search for global document (with hybrid search). But, with plugin.
 
 # Conclusion
 
