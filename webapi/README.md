@@ -1,189 +1,180 @@
-# Chat Copilot backend web API service
+# CUSTOM Chat Copilot Application
 
-This directory contains the source code for Chat Copilot's backend web API service. The front end web application component can be found in the [webapp/](../webapp/) directory.
+> **IMPORTANT**
+>
+> This custom chat copilot application is a custom implementation of the original Chat Copilot sample :
+>
+> - Original Documentation : [Original Chat Copilot Sample](https://learn.microsoft.com/en-us/semantic-kernel/chat-copilot/)
+> - Github Repository : [Original Chat Copilot Sample Github](https://github.com/microsoft/chat-copilot)
+>
+> Please refer to the original documentation for a first try or a first deployment.
 
-## Running the Chat Copilot sample
+# Differences with the original Sample
 
-To configure and run either the full Chat Copilot application or only the backend API, please view the [main instructions](../README.md#instructions).
+I updated and added some features.
 
-# (Under Development)
+# Custom Chat Skill
 
-The following material is under development and may not be complete or accurate.
+In the original sample, the process to create a system prompt was : create **audience** (who are in the chat), modify **intent** of the user's ask and others steps (WorkingMemory, longTermMemory and document memory). Audience and intent **use prompts and consomme some tokens**. In my case, we **don't need this 2 behaviors**.
 
-## Visual Studio Code
+**1. CustomChatSkill.cs**
 
-1. build (CopilotChatWebApi)
-2. run (CopilotChatWebApi)
-3. [optional] watch (CopilotChatWebApi)
+So, I added a "CustomChatSkill.cs" file (in webapi/skills/ChatSkills/) that implement my own version of the chat skill. In this version I delete some methods (For Audiance and Intent). Audience is an empty string and Intent is the unchanged user's ask. This behavior is more like ChatGPT (or Azure OpenAI Studio with Chat mode).
 
-## Visual Studio (2022 or newer)
+**2. CustomBotResponsePrompt.cs**
 
-1. Open the solution file in Visual Studio 2022 or newer (`CopilotChat.sln`).
-2. In Solution Explorer, right-click on `CopilotChatWebApi` and select `Set as Startup Project`.
-3. Start debugging by pressing `F5` or selecting the menu item `Debug`->`Start Debugging`.
+To support the new CustomChatSkill, I needed to implement my own custom bot response : "CustomBotResponsePrompt.cs" (in webapi/Models/Response/). This class is a copy of the original "BotResponsePrompt.cs" with some modifications :
 
-4. **(Optional)** To enable support for uploading image file formats such as png, jpg and tiff, there are two options within the `OcrSupport` section of `./appsettings.json`, the Tesseract open source library and Azure Form Recognizer.
-   - **Tesseract** we have included the [Tesseract](https://www.nuget.org/packages/Tesseract) nuget package.
-     - You will need to obtain one or more [tessdata language data files](https://github.com/tesseract-ocr/tessdata) such as `eng.traineddata` and add them to your `./data` directory or the location specified in the `OcrSupport:Tesseract:FilePath` location in `./appsettings.json`.
-     - Set the `Copy to Output Directory` value to `Copy if newer`.
-   - **Azure Form Recognizer** we have included the [Azure.AI.FormRecognizer](https://www.nuget.org/packages/Azure.AI.FormRecognizer) nuget package.
-     - You will need to obtain an [Azure Form Recognizer](https://azure.microsoft.com/en-us/services/form-recognizer/) resource and add the `OcrSupport:AzureFormRecognizer:Endpoint` and `OcrSupport:AzureFormRecognizer:Key` values to the `./appsettings.json` file.
-
-## Enabling Sequential Planner
-
-If you want to use SequentialPlanner (multi-step) instead ActionPlanner (single-step), we recommend using `gpt-4` or `gpt-3.5-turbo` as the planner model. **SequentialPlanner works best with `gpt-4`.** Using `gpt-3.5-turbo` will require using a relevancy filter.
-
-To enable sequential planner,
-
-1. In [./webapi/appsettings.json](appsettings.json), set `"Type": "Sequential"` under the `Planner` section.
-1. Then, set your preferred Planner model (`gpt-4` or `gpt-3.5-turbo`) under the `AIService` configuration section.
-   1. If using `gpt-4`, no other changes are required.
-   1. If using `gpt-3.5-turbo`: change [CopilotChatPlanner.cs](Skills/ChatSkills/CopilotChatPlanner.cs) to initialize SequentialPlanner with a RelevancyThreshold\*.
-      - Add `using` statement to top of file:
-        ```
-        using Microsoft.SemanticKernel.Planning.Sequential;
-        ```
-      - The `CreatePlanAsync` method should return the following line if `this._plannerOptions?.Type == "Sequential"` is true:
-        ```
-        return new SequentialPlanner(this.Kernel, new SequentialPlannerConfig { RelevancyThreshold = 0.75 }).CreatePlanAsync(goal);
-        ```
-        \* The `RelevancyThreshold` is a number from 0 to 1 that represents how similar a goal is to a function's name/description/inputs. You want to tune that value when using SequentialPlanner to help keep things scoped while not missing on on things that are relevant or including too many things that really aren't. `0.75` is an arbitrary threshold and we recommend developers play around with this number to see what best fits their scenarios.
-1. Restart the `webapi` - Copilot Chat should be now running locally with SequentialPlanner.
-
-## (Optional) Enabling Cosmos Chat Store.
-
-[Azure Cosmos DB](https://learn.microsoft.com/en-us/azure/cosmos-db/introduction) can be used as a persistent chat store for Chat Copilot. Chat stores are used for storing chat sessions, participants, and messages.
-
-### Prerequisites
-
-#### 1. Containers and PartitionKeys
-
-In an effort to optimize performance, each container must be created with a specific partition key:
-| Store | ContainerName | PartitionKey |
-| ----- | ------------- | ------------ |
-| Chat Sessions | chatsessions | /id (default) |
-| Chat Messages | chatmessages | /chatId |
-| Chat Memory Sources | chatmemorysources | /chatId |
-| Chat Partipants | chatparticipants | /userId |
-
-> For existing customers using CosmosDB before [Release 0.3](https://github.com/microsoft/chat-copilot/releases/tag/0.3), our recommendation is to remove the existing Cosmos DB containers and redeploy to realize the performance update related to the partition schema. To preserve existing chats, containers can be migrated as described [here](https://learn.microsoft.com/en-us/azure/cosmos-db/intra-account-container-copy#copy-a-container).
-
-## (Optional) Enabling the Qdrant Memory Store
-
-By default, the service uses an in-memory volatile memory store that, when the service stops or restarts, forgets all memories.
-[Qdrant](https://github.com/qdrant/qdrant) is a persistent scalable vector search engine that can be deployed locally in a container or [at-scale in the cloud](https://github.com/Azure-Samples/qdrant-azure).
-
-To enable the Qdrant memory store, you must first deploy Qdrant locally and then configure the Copilot Chat API service to use it.
-
-### 1. Configure your environment
-
-Before you get started, make sure you have the following additional requirements in place:
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop) for hosting the [Qdrant](https://github.com/qdrant/qdrant) vector search engine.
-
-### 2. Deploy Qdrant VectorDB locally
-
-1. Open a terminal and use Docker to pull down the container image.
-
-   ```bash
-   docker pull qdrant/qdrant
-   ```
-
-2. Change directory to this repo and create a `./data/qdrant` directory to use as persistent storage.
-   Then start the Qdrant container on port `6333` using the `./data/qdrant` folder as the persistent storage location.
-
-   ```bash
-   mkdir ./data/qdrant
-   docker run --name copilotchat -p 6333:6333 -v "$(pwd)/data/qdrant:/qdrant/storage" qdrant/qdrant
-   ```
-
-   > To stop the container, in another terminal window run `docker container stop copilotchat; docker container rm copilotchat;`.
-
-## (Optional) Enabling the Azure Cognitive Search Memory Store
-
-Azure Cognitive Search can be used as a persistent memory store for Copilot Chat.
-The service uses its [vector search](https://learn.microsoft.com/en-us/azure/search/vector-search-overview) capabilities.
-
-## (Optional) Enable Application Insights telemetry
-
-Enabling telemetry on CopilotChatApi allows you to capture data about requests to and from the API, allowing you to monitor the deployment and monitor how the application is being used.
-
-To use Application Insights, first create an instance in your Azure subscription that you can use for this purpose.
-
-On the resource overview page, in the top right use the copy button to copy the Connection String and paste this into the `APPLICATIONINSIGHTS_CONNECTION_STRING` setting as either a appsettings value, or add it as a secret.
-
-In addition to this there are some custom events that can inform you how users are using the service such as `SkillFunction`.
-
-To access these custom events the suggested method is to use Azure Data Explorer (ADX). To access data from Application Insights in ADX, create a new dashboard and add a new Data Source (use the ellipsis dropdown in the top right).
-
-In the Cluster URI use the following link: `https://ade.applicationinsights.io/subscriptions/<Your subscription Id>`. The subscription id is shown on the resource page for your Applications Insights instance. You can then select the Database for the Application Insights resource.
-
-For more info see [Query data in Azure Monitor using Azure Data Explorer](https://learn.microsoft.com/en-us/azure/data-explorer/query-monitor-data).
-
-CopilotChat specific events are in a table called `customEvents`.
-
-For example to see the most recent 100 skill function invocations:
-
-```kql
-customEvents
-| where timestamp between (_startTime .. _endTime)
-| where name == "SkillFunction"
-| extend skill = tostring(customDimensions.skillName)
-| extend function = tostring(customDimensions.functionName)
-| extend success = tobool(customDimensions.success)
-| extend userId = tostring(customDimensions.userId)
-| extend environment = tostring(customDimensions.AspNetCoreEnvironment)
-| extend skillFunction = strcat(skill, '/', function)
-| project timestamp, skillFunction, success, userId, environment
-| order by timestamp desc
-| limit 100
+```csharp
+public CustomBotResponsePrompt(
+     string systemDescription,
+     string systemResponse,
+     string audience,
+     string userIntent,
+     string chatMemories,
+     string documentMemories,
+     SemanticDependency<StepwiseThoughtProcess> externalInformation,
+     string chatHistory,
+     ChatCompletionContextMessages metaPromptTemplate
+ )
+ {
+     this.SystemPersona = string.Join("\n", systemDescription, systemResponse);
+     //this.Audience = audience;
+     //this.UserIntent = userIntent;
+     this.PastMemories = string.Join("\n", chatMemories, documentMemories).Trim();
+     this.ExternalInformation = externalInformation;
+     this.ChatHistory = chatHistory;
+     this.MetaPromptTemplate = metaPromptTemplate;
+ }
 ```
 
-Or to report the success rate of skill functions against environments, you can first add a parameter to the dashboard to filter the environment.
+**3. SemanticKernelExtension.cs**
 
-You can use this query to show the environments available by adding the `Source` as this `Query`:
+In this file, I update the "RegisterChatSkill" method to use my own CustomChatSkill and CustomBotResponsePrompt. You well see an new instance of CustomChatSkill insted ChatSkill.
 
-```kql
-customEvents
-| where timestamp between (['_startTime'] .. ['_endTime']) // Time range filtering
-| extend environment = tostring(customDimensions.AspNetCoreEnvironment)
-| distinct environment
+```csharp
+   // Custom Chat skill
+   kernel.ImportSkill(new CustomChatSkill(
+            kernel: kernel,
+            chatMessageRepository: sp.GetRequiredService<ChatMessageRepository>(),
+            chatSessionRepository: sp.GetRequiredService<ChatSessionRepository>(),
+            chatTokensUsageRepository: sp.GetRequiredService<ChatTokensUsageRepository>(),
+            messageRelayHubContext: sp.GetRequiredService<IHubContext<MessageRelayHub>>(),
+            promptOptions: sp.GetRequiredService<IOptions<PromptsOptions>>(),
+            documentImportOptions: sp.GetRequiredService<IOptions<DocumentMemoryOptions>>(),
+            contentSafety: sp.GetService<AzureContentSafety>(),
+            planner: sp.GetRequiredService<CopilotChatPlanner>(),
+            logger: sp.GetRequiredService<ILogger<ChatSkill>>()),
+      nameof(CustomChatSkill));
+
+   return kernel;
 ```
 
-Name the variable `_environment`, select `Multiple Selection` and tick `Add empty "Select all" value`. Finally `Select all` as the `Default value`.
+You can see the "chatTokensUsageRepository" parameter. I will explain it after.
 
-You can then query the success rate with this query:
+# Memories
 
-```kql
-customEvents
-| where timestamp between (_startTime .. _endTime)
-| where name == "SkillFunction"
-| extend skill = tostring(customDimensions.skillName)
-| extend function = tostring(customDimensions.functionName)
-| extend success = tobool(customDimensions.success)
-| extend environment = tostring(customDimensions.AspNetCoreEnvironment)
-| extend skillFunction = strcat(skill, '/', function)
-| summarize Total=count(), Success=countif(success) by skillFunction, environment
-| project skillFunction, SuccessPercentage = 100.0 * Success/Total, environment
-| order by SuccessPercentage asc
+## Memories : PromptOptions
+
+The original Chat Copilot use 2 concepts of memories : WorkingMemory and LongTermMemeory. Both of us are embedding in the VectorDB, retrieve by the system and added in the system prompt. In my case, we don't need it. So I update the "PromptOptions.cs" file (in webapi/Options/) to comment this memory for the collection.
+
+```csharp
+   // Memory map
+   internal IDictionary<string, string> MemoryMap => new Dictionary<string,  string>()
+   {
+      //{ this.LongTermMemoryName, this.LongTermMemory },
+      //{ this.WorkingMemoryName, this.WorkingMemory }
+   };
 ```
 
-You may wish to use the Visual tab to turn on conditional formatting to highlight low success rates or render it as a chart.
+# Documents ingestion
 
-Finally you could render this data over time with a query like this:
+<img src="logos.png" alt="image description" width="400">
 
-```kql
-customEvents
-| where timestamp between (_startTime .. _endTime)
-| where name == "SkillFunction"
-| extend skill = tostring(customDimensions.skillName)
-| extend function = tostring(customDimensions.functionName)
-| extend success = tobool(customDimensions.success)
-| extend environment = tostring(customDimensions.AspNetCoreEnvironment)
-| extend skillFunction = strcat(skill, '/', function)
-| summarize Total=count(), Success=countif(success) by skillFunction, environment, bin(timestamp,1m)
-| project skillFunction, SuccessPercentage = 100.0 * Success/Total, environment, timestamp
-| order by timestamp asc
+
+This custom Copilot chat use Azure intelligent Document to extract text from 
+
+## SUPPORTED FORMAT
+
+1. Microsoft Office files supported: 
+   - DOCX
+   - PPTX
+   - XLSX
+
+2. For **PDF** file, this application use Azure Intelligent Document too.
+
+
+Than, If you have image with text in your file it works with Azure Intelligent Document.
+
+On the original Copilot chat, pdf and docx are both convert ton text but only if file content texte format (not image).
+
+# Tokens Usage
+
+## 1. ChatTokensUsageRepository and ChatTokensUsage
+
+An another usecase is to delete chat conversations after a delay, like 30 days. Because concersation historics are stored in the CosmosDB database, we can use the TTL feature to delete automatically old conversations.
+But, in the same time, we want to know the tokens usages for all converations to track consumptions and costs.
+So, I added a new CosmosDB container to store tokens usages for all conversations. This container is called "chattokensusage" in store DB (CosmosDB or filesystem or volatile memory).
+To implemente it in Custom Copilot Chat, I added a new repository **"ChatTokensUsageRepository.cs"** (in webapi/Storage/) and a new model **"ChatTokensUsage.cs"** (in webapi/Models/Storage).
+
+This is a sample of un document in this container :
+
+```json
+{
+  "id": "9aa1f32b-eb84-4c97-8331-9c525866d6b2",
+  "userId": "bot",
+  "chatId": "f86b4d08-aff6-4fb6-a085-d2e23550a91d",
+  "timestamp": "2023-09-19T16:58:50.1329614+00:00",
+  "tokenUsage": {
+    "metaPromptTemplate": 870,
+    "responseCompletion": 239
+  },
+  "partition": "f86b4d08-aff6-4fb6-a085-d2e23550a91d"
+}
 ```
 
-Then use a Time chart on the Visual tab.
+> **IMPORTANT**
+> 
+> Than you need to add new container in CosmosDB database. For now, is not >implemented in Deployment script. So you need to add it manually.
+> 
+> Add a new container in CosmosDB database : **chattokensusage**
+> With partition key : **/chatId**
+
+
+## 2. ServiceExtensions
+
+To use this new CosmosDB container, we need to update **ServiceExtension.cs** file (in webapi/Extentions/)
+
+In **AddPersistentChatStore** method, you need to instantiate the new repository :
+
+```csharp
+   //CUSTOM
+   chatTokensUsageStorageContext = new CosmosDbContext<ChatTokensUsage>(
+   chatStoreConfig.Cosmos.ConnectionString, chatStoreConfig.Cosmos.Database, chatStoreConfig.Cosmos.ChatTokensUsageContainer);
+
+```
+
+And you can add the equivalent on each case in the switch statement.
+
+## 3. PowerBI Report
+
+To track tokens usages, I created a PowerBI report connected directly to the CosmosDB Container.
+
+![Alt PowerBI Tokens usage tracking](powerbi.png)
+
+# Front features
+
+I update the front application to disable Plugins, Plans & Personas but I will reactivate it soon. (A test for one of my customer)
+
+# Next Features
+
+1. Add an Azure function that will be triggered by a CosmosDB trigger to **delete vector index** in vector DB.
+2. Add Semantic Memory for Document ingestion and Search when this framework support Postgres vectorDB.
+3. Add a new feature to propose **3 nexts questions** that the user can ask after a bot response.
+4. Reactivate **Plugins, Plans**
+5. Add a **new plugins** to **show** how we can create and add plugins in this Copilot Chat.
+6. Use Postgres for documents in chat session and Azure cognitive search for global document (with hybrid search). But, with plugin.
+
+# Conclusion
+
+It's easy to add or update some features in Copilot Chat. My updates accelerate the process, the bot responses are quicker and the user experience is better.

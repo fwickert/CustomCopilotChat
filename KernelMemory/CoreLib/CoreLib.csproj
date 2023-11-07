@@ -1,0 +1,55 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+<LangVersion>11.0</LangVersion>
+        <RollForward>LatestMajor</RollForward>
+        <AssemblyName>Microsoft.KernelMemory.Core</AssemblyName>
+        <RootNamespace>Microsoft.KernelMemory</RootNamespace>
+        <NoWarn>CA1711,CA1724,CA1308,CA1812,CA1859</NoWarn>
+        <IsPackable>true</IsPackable>
+    </PropertyGroup>
+
+    <Import Project="../nuget/nuget-package.props" />
+
+    <ItemGroup>
+        <PackageReference Include="Azure.AI.FormRecognizer" Version="4.1.0" />
+        <PackageReference Include="Azure.Identity" Version="1.10.3" />
+        <PackageReference Include="Azure.Search.Documents" Version="11.5.0-beta.5" />
+        <PackageReference Include="Azure.Storage.Blobs" Version="12.18.0" />
+        <PackageReference Include="Azure.Storage.Queues" Version="12.16.0" />
+        <PackageReference Include="DocumentFormat.OpenXml" Version="2.20.0" />
+        <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="7.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Hosting" Version="7.0.1" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+        <PackageReference Include="Microsoft.SemanticKernel.Connectors.AI.OpenAI" Version="0.24.230918.1-preview" />
+        <PackageReference Include="Microsoft.SemanticKernel.Connectors.Memory.Postgres" Version="0.24.230918.1-preview" />
+        <PackageReference Include="Microsoft.SemanticKernel.Core" Version="0.24.230918.1-preview" />
+        <PackageReference Include="PdfPig" Version="0.1.8" />
+        <PackageReference Include="Polly.Core" Version="8.1.0" />
+        <PackageReference Include="RabbitMQ.Client" Version="6.6.0" />
+        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="System.Linq.Async" Version="6.0.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Include="AI\Tokenizers\GPT3\encoder.json" />
+        <EmbeddedResource Include="AI\Tokenizers\GPT3\vocab.bpe" />
+        <EmbeddedResource Include="Prompts\summarize.txt" />
+        <EmbeddedResource Include="Prompts\answer-with-facts.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <InternalsVisibleTo Include="Microsoft.UnitTests" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\ClientLib\ClientLib.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1" />
+    </ItemGroup>
+
+</Project>

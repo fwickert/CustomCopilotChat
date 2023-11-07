@@ -1,7 +1,9 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using CopilotChat.WebApi.Models.Request;
 
 namespace CopilotChat.WebApi.Options;
 
@@ -27,13 +29,7 @@ public class PromptsOptions
     /// Weight of memories in the contextual part of the final prompt.
     /// Contextual prompt excludes all the system commands and user intent.
     /// </summary>
-    internal double MemoriesResponseContextWeight { get; } = 0.3;
-
-    /// <summary>
-    /// Weight of documents in the contextual part of the final prompt.
-    /// Contextual prompt excludes all the system commands and user intent.
-    /// </summary>
-    internal double DocumentContextWeight { get; } = 0.3;
+    internal double MemoriesResponseContextWeight { get; } = 0.6;
 
     /// <summary>
     /// Weight of information returned from planner (i.e., responses from OpenAPI skills).
@@ -45,25 +41,40 @@ public class PromptsOptions
     /// Upper bound of the relevancy score of a semantic memory to be included in the final prompt.
     /// The actual relevancy score is determined by the memory balance.
     /// </summary>
-    internal double SemanticMemoryRelevanceUpper { get; } = 0.9;
+    internal float SemanticMemoryRelevanceUpper { get; } = 0.9F;
 
     /// <summary>
     /// Lower bound of the relevancy score of a semantic memory to be included in the final prompt.
     /// The actual relevancy score is determined by the memory balance.
     /// </summary>
-    internal double SemanticMemoryRelevanceLower { get; } = 0.6;
+    internal float SemanticMemoryRelevanceLower { get; } = 0.6F;
 
     /// <summary>
     /// Minimum relevance of a document memory to be included in the final prompt.
     /// The higher the value, the answer will be more relevant to the user intent.
     /// </summary>
-    internal double DocumentMemoryMinRelevance { get; } = 0.8;
+    internal float DocumentMemoryMinRelevance { get; } = 0.8F;
 
     // System
     [Required, NotEmptyOrWhitespace] public string KnowledgeCutoffDate { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string InitialBotMessage { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string SystemDescription { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string SystemResponse { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Context bot message for meta prompt when using external information acquired from a plan.
+    /// </summary>
+    [Required, NotEmptyOrWhitespace] public string ProposedPlanBotMessage { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Supplement to help guide model in using data.
+    /// </summary>
+    [Required, NotEmptyOrWhitespace] public string PlanResultsDescription { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Supplement to help guide model in using a response from StepwisePlanner.
+    /// </summary>
+    [Required, NotEmptyOrWhitespace] public string StepwisePlannerSupplement { get; set; } = string.Empty;
 
     internal string[] SystemAudiencePromptComponents => new string[]
     {
@@ -91,6 +102,12 @@ public class PromptsOptions
     // Audience extraction
     [Required, NotEmptyOrWhitespace] public string SystemAudience { get; set; } = string.Empty;
     [Required, NotEmptyOrWhitespace] public string SystemAudienceContinuation { get; set; } = string.Empty;
+
+    // Memory storage
+    [Required, NotEmptyOrWhitespace] public string MemoryIndexName { get; set; } = string.Empty;
+
+    // Document memory
+    [Required, NotEmptyOrWhitespace] public string DocumentMemoryName { get; set; } = string.Empty;
 
     // Memory extraction
     [Required, NotEmptyOrWhitespace] public string SystemCognitive { get; set; } = string.Empty;
@@ -161,4 +178,29 @@ public class PromptsOptions
     /// </summary>
     /// <returns>A shallow copy of the options.</returns>
     internal PromptsOptions Copy() => (PromptsOptions)this.MemberwiseClone();
+
+    /// <summary>
+    /// Tries to retrieve the memoryContainerName associated with the specified memory type.
+    /// </summary>
+    internal bool TryGetMemoryContainerName(string memoryType, out string memoryContainerName)
+    {
+        memoryContainerName = "";
+        if (!Enum.TryParse<SemanticMemoryType>(memoryType, true, out SemanticMemoryType semanticMemoryType))
+        {
+            return false;
+        }
+
+        switch (semanticMemoryType)
+        {
+            case SemanticMemoryType.LongTermMemory:
+                memoryContainerName = this.LongTermMemoryName;
+                return true;
+
+            case SemanticMemoryType.WorkingMemory:
+                memoryContainerName = this.WorkingMemoryName;
+                return true;
+
+            default: return false;
+        }
+    }
 }

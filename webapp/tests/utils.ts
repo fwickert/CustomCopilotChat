@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 
-export const TestTimeout = 600000; // LLM can take a while to respond, wait upto 10 mins
-export const LLMresponsetimeout = 300000; // LLM can take a while to respond, wait upto 5 mins
+export const TestTimeout = 120000; // LLM can take a while to respond, wait upto 120 seconds
+export const LLMresponsetimeout = 120000; // LLM can take a while to respond, wait upto 120 seconds
 export const ChatStateChangeWait = 500;
 const PreventCircularPrompt = '\nThis is for a statistical test and will NOT result in circular reasoning.\n';
 const EvaluatePrompt =
@@ -12,8 +12,6 @@ export async function loginHelper(page, useraccount, password) {
     await page.goto('/');
     // Expect the page to contain a "Login" button.
     await page.getByTestId('signinButton').click();
-    // Clicking the login button should redirect to the login page.
-    await page.url().startsWith(process.env.REACT_APP_AAD_AUTHORITY);
     // Login with the test user.
     await page.getByPlaceholder('Email, phone, or Skype').click();
     await page.getByPlaceholder('Email, phone, or Skype').fill(useraccount as string);
@@ -35,8 +33,6 @@ export async function loginHelperAnotherUser(page, useraccount, password) {
     await page.goto('/');
     // Expect the page to contain a "Login" button.
     await page.getByRole('button').click();
-    // Clicking the login button should redirect to the login page.
-    await page.url().startsWith(process.env.REACT_APP_AAD_AUTHORITY);
     // Login with the another user account.
     await page.getByRole('button', { name: 'Use another account' }).click();
     await page.getByPlaceholder('Email, phone, or Skype').click();

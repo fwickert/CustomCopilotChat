@@ -45,17 +45,9 @@ public class CosmosOptions
     [Required, NotEmptyOrWhitespace]
     public string ChatParticipantsContainer { get; set; } = string.Empty;
 
-    //CUSTOM
-
     /// <summary>
     /// Gets or sets the Cosmos container for tokens usage
     /// </summary>
     [Required, NotEmptyOrWhitespace]
     public string ChatTokensUsageContainer { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Gets or sets the Cosmos container for user consent
-    /// </summary>
-    [Required, NotEmptyOrWhitespace]
-    public string UsersConsentContainer { get; set; } = string.Empty;
 }

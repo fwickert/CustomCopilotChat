@@ -5,7 +5,7 @@ import { useChat } from '../../../libs/hooks/useChat';
 import { useAppDispatch, useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { editConversationSystemDescription } from '../../../redux/features/conversations/conversationsSlice';
-//import { MemoryBiasSlider } from '../persona/MemoryBiasSlider';
+import { MemoryBiasSlider } from '../persona/MemoryBiasSlider';
 import { PromptEditor } from '../persona/PromptEditor';
 import { TabView } from './TabView';
 
@@ -16,7 +16,6 @@ export const PersonaTab: React.FC = () => {
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const chatState = conversations[selectedId];
 
-    {/*
     const [shortTermMemory, setShortTermMemory] = React.useState<string>('');
     const [longTermMemory, setLongTermMemory] = React.useState<string>('');
 
@@ -34,7 +33,7 @@ export const PersonaTab: React.FC = () => {
         // We don't want to have chat as one of the dependencies as it will cause infinite loop.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedId]);
-*/}
+
     return (
         <TabView title="Persona" learnMoreDescription="personas" learnMoreLink=" https://aka.ms/sk-intro-to-personas ">
             <PromptEditor
@@ -56,8 +55,6 @@ export const PersonaTab: React.FC = () => {
                         });
                 }}
             />
-            {/*
-
             <PromptEditor
                 title="Short Term Memory"
                 chatId={selectedId}
@@ -73,7 +70,6 @@ export const PersonaTab: React.FC = () => {
                 info="Extract information that is encoded and consolidated from other memory types, such as working memory or sensory memory. It should be useful for maintaining and recalling one's personal identity, history, and knowledge over time."
             />
             <MemoryBiasSlider />
-             */}
         </TabView>
     );
 };

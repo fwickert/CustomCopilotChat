@@ -410,6 +410,7 @@ FodyWeavers.xsd
 *.pem
 
 .env
+.env.production
 certs/
 launchSettings.json
 config.development.yaml
@@ -490,3 +491,10 @@ webapi/CopilotChatWebApi.sln
 
 # Tesseract OCR language data files
 *.traineddata
+
+# Semantic Memory local storage
+tmp/*
+
+# Custom plugins in default directories
+*/Skills/NativePlugins
+*/Skills/SemanticPlugins

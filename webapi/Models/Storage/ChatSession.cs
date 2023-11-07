@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using CopilotChat.WebApi.Storage;
 
@@ -11,6 +12,8 @@ namespace CopilotChat.WebApi.Models.Storage;
 /// </summary>
 public class ChatSession : IStorageEntity
 {
+    private const string CurrentVersion = "2.0";
+
     /// <summary>
     /// Chat ID that is persistent and unique.
     /// </summary>
@@ -36,7 +39,17 @@ public class ChatSession : IStorageEntity
     /// The higher this value, the more the system will rely on long term memory by lowering
     /// the relevance threshold of long term memory and increasing the threshold score of working memory.
     /// </summary>
-    public double MemoryBalance { get; set; } = 0.5;
+    public float MemoryBalance { get; set; } = 0.5F;
+
+    /// <summary>
+    /// A list of enabled plugins.
+    /// </summary>
+    public HashSet<string> EnabledPlugins { get; set; } = new();
+
+    /// <summary>
+    /// Used to determine if the current chat requires upgrade.
+    /// </summary>
+    public string? Version { get; set; }
 
     /// <summary>
     /// The partition key for the session.
@@ -55,5 +68,6 @@ public class ChatSession : IStorageEntity
         this.Title = title;
         this.CreatedOn = DateTimeOffset.Now;
         this.SystemDescription = systemDescription;
+        this.Version = CurrentVersion;
     }
 }

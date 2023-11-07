@@ -1,13 +1,12 @@
-﻿using System;
+﻿// Copyright (c) Microsoft. All rights reserved.
+
 using System.Collections.Generic;
-using System.Text.Json.Serialization;
+using System;
 using CopilotChat.WebApi.Storage;
+using System.Text.Json.Serialization;
 
 namespace CopilotChat.WebApi.Models.Storage;
 
-/// <summary>
-/// Information about usage tokens.
-/// </summary>
 public class ChatTokensUsage : IStorageEntity
 {
     /// <summary>

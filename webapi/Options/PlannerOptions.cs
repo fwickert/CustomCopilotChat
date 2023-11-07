@@ -37,6 +37,12 @@ public class PlannerOptions
     public const string PropertyName = "Planner";
 
     /// <summary>
+    /// The model name used by the planner.
+    /// </summary>
+    [Required]
+    public string Model { get; set; } = string.Empty;
+
+    /// <summary>
     /// The type of planner to used to create plan.
     /// </summary>
     [Required]
@@ -59,6 +65,12 @@ public class PlannerOptions
     /// Options on how to handle planner errors.
     /// </summary>
     public ErrorOptions ErrorHandling { get; set; } = new ErrorOptions();
+
+    /// <summary>
+    /// Optional flag to indicate whether to use the planner result as the bot response.
+    /// </summary>
+    [RequiredOnPropertyValue(nameof(Type), PlanType.Stepwise)]
+    public bool UseStepwiseResultAsBotResponse { get; set; } = false;
 
     /// <summary>
     /// The configuration for the stepwise planner.

@@ -5,6 +5,7 @@ export const Constants = {
         name: 'Copilot',
         updateCheckIntervalSeconds: 60 * 5,
         CONNECTION_ALERT_ID: 'connection-alert',
+        importTypes: '.txt,.pdf,.docx, .xlsx, .pptx, .md,.jpg,.jpeg,.png,.tif,.tiff,.bmp,.gif',
     },
     msal: {
         method: 'redirect', // 'redirect' | 'popup'
@@ -12,9 +13,7 @@ export const Constants = {
             cacheLocation: 'localStorage',
             storeAuthStateInCookie: false,
         },
-        semanticKernelScopes: ['openid', 'offline_access', 'profile'].concat(
-            (process.env.REACT_APP_AAD_API_SCOPE as string) ? [process.env.REACT_APP_AAD_API_SCOPE as string] : [],
-        ),
+        semanticKernelScopes: ['openid', 'offline_access', 'profile'],
         // MS Graph scopes required for loading user information
         msGraphAppScopes: ['User.ReadBasic.All'],
     },
@@ -46,8 +45,6 @@ export const Constants = {
         // For a list of Microsoft Graph permissions, see https://learn.microsoft.com/en-us/graph/permissions-reference.
         // Your application registration will need to be granted these permissions in Azure Active Directory.
         msGraphScopes: ['Calendars.Read', 'Mail.Read', 'Mail.Send', 'Tasks.ReadWrite', 'User.Read'],
-        // All OpenAI plugin manifest files should be located at this path per OpenAI requirements: "https://platform.openai.com/docs/plugins/getting-started/plugin-manifest
-        MANIFEST_PATH: '/.well-known/ai-plugin.json',
     },
     KEYSTROKE_DEBOUNCE_TIME_MS: 250,
 };

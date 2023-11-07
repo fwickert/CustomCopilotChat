@@ -1,9 +1,26 @@
 // Copyright (c) Microsoft. All rights reserved.
 
-import { AuthHelper, DefaultActiveUserInfo } from '../../../libs/auth/AuthHelper';
+import { AuthConfig } from '../../../libs/auth/AuthHelper';
 import { AlertType } from '../../../libs/models/AlertType';
-import { ServiceOptions } from '../../../libs/models/ServiceOptions';
+import { IChatUser } from '../../../libs/models/ChatUser';
+import { ServiceInfo } from '../../../libs/models/ServiceInfo';
 import { TokenUsage } from '../../../libs/models/TokenUsage';
+
+// This is the default user information when authentication is set to 'None'.
+// It must match what is defined in PassthroughAuthenticationHandler.cs on the backend.
+export const DefaultChatUser: IChatUser = {
+    id: 'c05c61eb-65e4-4223-915a-fe72b0c9ece1',
+    emailAddress: 'user@contoso.com',
+    fullName: 'Default User',
+    online: true,
+    isTyping: false,
+};
+
+export const DefaultActiveUserInfo: ActiveUserInfo = {
+    id: DefaultChatUser.id,
+    email: DefaultChatUser.emailAddress,
+    username: DefaultChatUser.fullName,
+};
 
 export interface ActiveUserInfo {
     id: string;
@@ -36,10 +53,11 @@ export interface Setting {
 export interface AppState {
     alerts: Alert[];
     activeUserInfo?: ActiveUserInfo;
+    authConfig?: AuthConfig | null;
     tokenUsage: TokenUsage;
     features: Record<FeatureKeys, Feature>;
     settings: Setting[];
-    serviceOptions: ServiceOptions;
+    serviceInfo: ServiceInfo;
     isMaintenance: boolean;
 }
 
@@ -67,7 +85,6 @@ export const Features = {
         enabled: true,
         label: 'Plugins & Planners & Personas',
         description: 'The Plans and Persona tabs are hidden until you turn this on',
-        inactive: false,
     },
     [FeatureKeys.AzureContentSafety]: {
         enabled: false,
@@ -81,13 +98,12 @@ export const Features = {
     },
     [FeatureKeys.BotAsDocs]: {
         enabled: false,
-        label: 'Save/Load Chat Sessions',
+        label: 'Export Chat Sessions',
     },
     [FeatureKeys.MultiUserChat]: {
         enabled: false,
         label: 'Live Chat Session Sharing',
         description: 'Enable multi-user chat sessions. Not available when authorization is disabled.',
-        inactive: !AuthHelper.IsAuthAAD,
     },
     [FeatureKeys.RLHF]: {
         enabled: false,
@@ -123,10 +139,16 @@ export const Settings = [
 
 export const initialState: AppState = {
     alerts: [],
-    activeUserInfo: AuthHelper.IsAuthAAD ? undefined : DefaultActiveUserInfo,
+    activeUserInfo: DefaultActiveUserInfo,
+    authConfig: {} as AuthConfig,
     tokenUsage: {},
     features: Features,
     settings: Settings,
-    serviceOptions: { memoryStore: { types: [], selectedType: '' }, version: '' },
+    serviceInfo: {
+        memoryStore: { types: [], selectedType: '' },
+        availablePlugins: [],
+        version: '',
+        isContentSafetyEnabled: false,
+    },
     isMaintenance: false,
 };

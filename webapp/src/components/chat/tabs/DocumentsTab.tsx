@@ -35,6 +35,7 @@ import * as React from 'react';
 import { useRef } from 'react';
 import { useChat, useFile } from '../../../libs/hooks';
 import { ChatMemorySource } from '../../../libs/models/ChatMemorySource';
+import { Constants } from '../../../Constants';
 import { useAppSelector } from '../../../redux/app/hooks';
 import { RootState } from '../../../redux/app/store';
 import { timestampToDateString } from '../../utils/TextUtils';
@@ -78,7 +79,7 @@ interface TableItem {
         label: string;
         timestamp: number;
     };
-    tokens: number;
+    size: number;
 }
 
 export const DocumentsTab: React.FC = () => {
@@ -86,7 +87,7 @@ export const DocumentsTab: React.FC = () => {
     const chat = useChat();
     const fileHandler = useFile();
 
-    const { serviceOptions } = useAppSelector((state: RootState) => state.app);
+    const { serviceInfo } = useAppSelector((state: RootState) => state.app);
     const { conversations, selectedId } = useAppSelector((state: RootState) => state.conversations);
     const { importingDocuments } = conversations[selectedId];
 
@@ -104,7 +105,7 @@ export const DocumentsTab: React.FC = () => {
                           name: document,
                           sharedBy: 'N/A',
                           createdOn: 0,
-                          tokens: 0,
+                          size: 0,
                       } as ChatMemorySource;
                   })
                 : [];
@@ -131,7 +132,7 @@ export const DocumentsTab: React.FC = () => {
                     type="file"
                     ref={documentFileRef}
                     style={{ display: 'none' }}
-                    accept=".txt,.pdf,.md,.jpg,.jpeg,.png,.tif,.tiff,.docx,.pptx,.xlsx"
+                    accept={Constants.app.importTypes}
                     multiple={true}
                     onChange={() => {
                         void fileHandler.handleImport(selectedId, documentFileRef);
@@ -152,19 +153,19 @@ export const DocumentsTab: React.FC = () => {
                 {importingDocuments && importingDocuments.length > 0 && <Spinner size="tiny" />}
                 {/* Hardcode vector database as we don't support switching vector store dynamically now. */}
                 <div className={classes.vectorDatabase}>
-                    <Label size="large">Vector Database</Label>
+                    <Label size="large">Vector Database:</Label>
                     <RadioGroup
-                        defaultValue={serviceOptions.memoryStore.selectedType}
+                        defaultValue={serviceInfo.memoryStore.selectedType}
                         layout="horizontal"
                         disabled={conversations[selectedId].disabled}
                     >
-                        {serviceOptions.memoryStore.types.map((storeType) => {
+                        {serviceInfo.memoryStore.types.map((storeType) => {
                             return (
                                 <Radio
                                     key={storeType}
                                     value={storeType}
                                     label={storeType}
-                                    disabled={storeType !== serviceOptions.memoryStore.selectedType}
+                                    disabled={storeType !== serviceInfo.memoryStore.selectedType}
                                 />
                             );
                         })}
@@ -233,22 +234,22 @@ function useTable(resources: ChatMemorySource[]) {
             },
         }),
         createTableColumn<TableItem>({
-            columnId: 'tokenCounts',
+            columnId: 'fileSize',
             renderHeaderCell: () => (
-                <TableHeaderCell key="tokenCounts" {...headerSortProps('tokenCounts')}>
-                    Token Count
+                <TableHeaderCell key="fileSize" {...headerSortProps('fileSize')}>
+                    Size (bytes)
                 </TableHeaderCell>
             ),
             renderCell: (item) => (
                 <TableCell key={`${item.id}-tokens`}>
-                    {item.id.startsWith('in-progress') ? 'N/A' : item.tokens}
+                    {item.id.startsWith('in-progress') ? 'N/A' : item.size.toLocaleString()}
                 </TableCell>
             ),
             compare: (a, b) => {
                 const aAccess = getAccessString(a.chatId);
                 const bAccess = getAccessString(b.chatId);
                 const comparison = aAccess.localeCompare(bAccess);
-                return getSortDirection('tokenCounts') === 'ascending' ? comparison : comparison * -1;
+                return getSortDirection('fileSize') === 'ascending' ? comparison : comparison * -1;
             },
         }),
         createTableColumn<TableItem>({
@@ -307,7 +308,7 @@ function useTable(resources: ChatMemorySource[]) {
             label: timestampToDateString(item.createdOn),
             timestamp: item.createdOn,
         },
-        tokens: item.tokens,
+        size: item.size,
     }));
 
     const {

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Package CiopilotChat's WebAPI for deployment to Azure
+# Package Chat Copilot application for deployment to Azure
 
 set -e
 
@@ -18,44 +18,49 @@ usage() {
     echo "  -v  --version VERSION                  Version to set files to (default: 1.0.0)"
     echo "  -i  --info INFO                        Additional info to put in version details"
     echo "  -nz, --no-zip                          Do not zip package (default: false)"
+    echo "  -s, --skip-frontend                    Do not build frontend files"
 }
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
     key="$1"
     case $key in
-        -c|--configuration)
+    -c | --configuration)
         CONFIGURATION="$2"
         shift
         shift
         ;;
-        -d|--dotnet)
+    -d | --dotnet)
         DOTNET="$2"
         shift
         shift
         ;;
-        -r|--runtime)
+    -r | --runtime)
         RUNTIME="$2"
         shift
         shift
         ;;
-        -o|--output)
+    -o | --output)
         OUTPUT_DIRECTORY="$2"
         shift
         shift
         ;;
-        -v|--version)
+    -v | --version)
         VERSION="$2"
         shift
         shift
         ;;
-        -i|--info)
+    -i | --info)
         INFO="$2"
         shift
         shift
         ;;
-        -nz|--no-zip)
+    -nz | --no-zip)
         NO_ZIP=true
+        shift
+        ;;
+    -s|--skip-frontend)
+        SKIP_FRONTEND=true
         shift
         ;;
         *)
@@ -66,11 +71,13 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+echo  "Building backend executables..."
+
 # Set defaults
 : "${CONFIGURATION:="Release"}"
 : "${DOTNET:="net6.0"}"
 : "${RUNTIME:="linux-x64"}"
-: "${VERSION:="1.0.0"}"
+: "${VERSION:="0.0.0"}"
 : "${INFO:=""}"
 : "${OUTPUT_DIRECTORY:="$SCRIPT_ROOT"}"
 
@@ -86,9 +93,52 @@ if [[ ! -d "$PUBLISH_ZIP_DIRECTORY" ]]; then
 fi
 
 echo "Build configuration: $CONFIGURATION"
-dotnet publish "$SCRIPT_ROOT/../../webapi/CopilotChatWebApi.csproj" --configuration $CONFIGURATION --framework $DOTNET --runtime $RUNTIME --self-contained --output "$PUBLISH_OUTPUT_DIRECTORY" /p:AssemblyVersion=$VERSION /p:FileVersion=$VERSION /p:InformationalVersion=$INFO
+dotnet publish "$SCRIPT_ROOT/../../webapi/CopilotChatWebApi.csproj" \
+    --configuration $CONFIGURATION \
+    --framework $DOTNET \
+    --runtime $RUNTIME \
+    --self-contained \
+    --output "$PUBLISH_OUTPUT_DIRECTORY" \
+    //p:AssemblyVersion=$VERSION \
+    //p:FileVersion=$VERSION \
+    //p:InformationalVersion=$INFO
+
 if [ $? -ne 0 ]; then
     exit 1
+fi
+
+if [[ -z "$SKIP_FRONTEND" ]]; then
+    echo "Building static frontend files..."
+
+    pushd "$SCRIPT_ROOT/../../webapp"
+
+    filePath="./.env.production"
+    if [ -f "$filePath" ]; then
+        rm "$filePath"
+    fi
+
+    echo "REACT_APP_BACKEND_URI=" >> "$filePath"
+    echo "REACT_APP_SK_VERSION=$Version" >> "$filePath"
+    echo "REACT_APP_SK_BUILD_INFO=$InformationalVersion" >> "$filePath"
+
+    echo "Installing yarn dependencies..."
+    yarn install
+    if [ $? -ne 0 ]; then
+        echo "Failed to install yarn dependencies"
+        exit 1
+    fi
+
+    echo "Building webapp..."
+    yarn build
+    if [ $? -ne 0 ]; then
+        echo "Failed to build webapp"
+        exit 1
+    fi
+
+    popd
+
+    echo "Copying frontend files to package"
+    cp -R "$SCRIPT_ROOT/../../webapp/build" "$PUBLISH_OUTPUT_DIRECTORY/wwwroot"
 fi
 
 # if not NO_ZIP then zip the package
@@ -98,5 +148,3 @@ if [[ -z "$NO_ZIP" ]]; then
     zip -r $PACKAGE_FILE_PATH .
     popd
 fi
-
-

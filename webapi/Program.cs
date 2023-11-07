@@ -42,13 +42,18 @@ public sealed class Program
         builder.Services
             .AddSingleton<ILogger>(sp => sp.GetRequiredService<ILogger<Program>>()) // some services require an un-templated ILogger
             .AddOptions(builder.Configuration)
-            .AddPlannerServices()
             .AddPersistentChatStore()
-            .AddPersistentOcrSupport()
+            .AddPlugins(builder.Configuration)
             .AddUtilities()
             .AddCopilotChatAuthentication(builder.Configuration)
-            .AddCopilotChatAuthorization()
-            .AddSemanticKernelServices();
+            .AddCopilotChatAuthorization();
+
+        // Configure and add semantic services
+        builder
+            .AddBotConfig()
+            .AddSemanticKernelServices()
+            .AddPlannerServices()
+            .AddKernelMemoryServices();
 
         // Add SignalR as the real time relay service
         builder.Services.AddSignalR();
@@ -65,9 +70,10 @@ public sealed class Program
 
         // Add in the rest of the services.
         builder.Services
+            .AddMaintenanceServices()
             .AddEndpointsApiExplorer()
             .AddSwaggerGen()
-            .AddCorsPolicy()
+            .AddCorsPolicy(builder.Configuration)
             .AddControllers()
             .AddJsonOptions(options =>
             {
@@ -77,6 +83,8 @@ public sealed class Program
 
         // Configure middleware and endpoints
         WebApplication app = builder.Build();
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
         app.UseCors();
         app.UseAuthentication();
         app.UseAuthorization();
@@ -85,7 +93,7 @@ public sealed class Program
             .RequireAuthorization();
         app.MapHealthChecks("/healthz");
 
-        // Add CopilotChat hub for real time communication
+        // Add Chat Copilot hub for real time communication
         app.MapHub<MessageRelayHub>("/messageRelayHub");
 
         // Enable Swagger for development environments.
@@ -93,6 +101,13 @@ public sealed class Program
         {
             app.UseSwagger();
             app.UseSwaggerUI();
+
+            // Redirect root URL to Swagger UI URL
+            app.MapWhen(
+                context => context.Request.Path == "/",
+                appBuilder =>
+                    appBuilder.Run(
+                        async context => await Task.Run(() => context.Response.Redirect("/swagger"))));
         }
 
         // Start the service

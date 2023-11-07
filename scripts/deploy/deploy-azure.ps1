@@ -21,14 +21,18 @@ param(
 
     [Parameter(Mandatory)]
     [string]
+    # Azure AD client ID for the frontend app registration
+    $FrontendClientId,
+
+    [Parameter(Mandatory)]
+    [string]
     # Azure AD tenant ID for authenticating users
     $TenantId,
 
-    [Parameter(Mandatory)]
     [ValidateSet("AzureOpenAI", "OpenAI")]
     [string]
     # AI service to use
-    $AIService,
+    $AIService = "AzureOpenAI",
 
     [string]
     # API key for existing Azure OpenAI resource or OpenAI account
@@ -43,12 +47,8 @@ param(
     $ResourceGroup,
 
     [string]
-    # Region to which to make the deployment (ignored when deploying to an existing resource group)
+    # Region to which to make the deployment
     $Region = "southcentralus",
-
-    [string]
-    # Region to deploy to the static web app into. This must be a region that supports static web apps.
-    $WebAppRegion = "westus2",
 
     [string]
     # SKU for the Azure App Service plan
@@ -58,14 +58,10 @@ param(
     # Azure AD cloud instance for authenticating users
     $AzureAdInstance = "https://login.microsoftonline.com",
 
-    [ValidateSet("Volatile", "AzureCognitiveSearch", "Qdrant", "Postgres")]
+    [ValidateSet("AzureCognitiveSearch", "Qdrant")]
     [string]
     # What method to use to persist embeddings
     $MemoryStore = "AzureCognitiveSearch",
-
-    [SecureString]
-    # Password for the Postgres database
-    $SqlAdminPassword,
 
     [switch]
     # Don't deploy Cosmos DB for chat storage - Use volatile memory instead
@@ -76,26 +72,33 @@ param(
     $NoSpeechServices,
 
     [switch]
+    # Deploy the web searcher plugin
+    $DeployWebSearcherPlugin,
+
+    [switch]
     # Switches on verbose template deployment output
-    $DebugDeployment
+    $DebugDeployment,
+
+    [switch]
+    # Skip deployment of binary packages
+    $NoDeployPackage
 )
 
 # if AIService is AzureOpenAI
 if ($AIService -eq "AzureOpenAI") {
     # Both $AIEndpoint and $AIApiKey must be set
     if ((!$AIEndpoint -and $AIApiKey) -or ($AIEndpoint -and !$AIApiKey)) {
-        Write-Error "When AIService is AzureOpenAI, when either AIEndpoint and AIApiKey are set then both must be set."
+        Write-Error "When AIService is AzureOpenAI, both AIEndpoint and AIApiKey must be set."
         exit 1
     }
 
     # If both $AIEndpoint and $AIApiKey are not set, set $DeployAzureOpenAI to true and inform the user. Otherwise set $DeployAzureOpenAI to false and inform the user.
     if (!$AIEndpoint -and !$AIApiKey) {
         $DeployAzureOpenAI = $true
-        Write-Host "When AIService is AzureOpenAI and both AIEndpoint and AIApiKey are not set then a new Azure OpenAI resource will be created."
+        Write-Host "When AIService is AzureOpenAI and both AIEndpoint and AIApiKey are not set, then a new Azure OpenAI resource will be created."
     }
     else {
         $DeployAzureOpenAI = $false
-        Write-Host "When AIService is AzureOpenAI and both AIEndpoint and AIApiKey are set, use the existing Azure OpenAI resource."
     }
 }
 
@@ -105,26 +108,22 @@ if ($AIService -eq "OpenAI" -and !$AIApiKey) {
     exit 1
 }
 
-if ($MemoryStore -eq "Postgres" -and !$SqlAdminPassword) {
-    Write-Host "When MemoryStore is Postgres, SqlAdminPassword must be set"
-    exit 1
-}
-
 $jsonConfig = "
 {
     `\`"webAppServiceSku`\`": { `\`"value`\`": `\`"$WebAppServiceSku`\`" },
-    `\`"webappLocation`\`": { `\`"value`\`": `\`"$WebAppRegion`\`" },
     `\`"aiService`\`": { `\`"value`\`": `\`"$AIService`\`" },
     `\`"aiApiKey`\`": { `\`"value`\`": `\`"$AIApiKey`\`" },
     `\`"aiEndpoint`\`": { `\`"value`\`": `\`"$AIEndpoint`\`" },
+    `\`"deployPackages`\`": { `\`"value`\`": $(If ($NoDeployPackage) {"false"} Else {"true"}) },
     `\`"azureAdInstance`\`": { `\`"value`\`": `\`"$AzureAdInstance`\`" },
     `\`"azureAdTenantId`\`": { `\`"value`\`": `\`"$TenantId`\`" },
     `\`"webApiClientId`\`": { `\`"value`\`": `\`"$BackendClientId`\`"},
+    `\`"frontendClientId`\`": { `\`"value`\`": `\`"$FrontendClientId`\`"},
     `\`"deployNewAzureOpenAI`\`": { `\`"value`\`": $(If ($DeployAzureOpenAI) {"true"} Else {"false"}) },
     `\`"memoryStore`\`": { `\`"value`\`": `\`"$MemoryStore`\`" },
     `\`"deployCosmosDB`\`": { `\`"value`\`": $(If (!($NoCosmosDb)) {"true"} Else {"false"}) },
     `\`"deploySpeechServices`\`": { `\`"value`\`": $(If (!($NoSpeechServices)) {"true"} Else {"false"}) },
-    `\`"sqlAdminPassword`\`": { `\`"value`\`": `\`"$(If ($SqlAdminPassword) {ConvertFrom-SecureString $SqlAdminPassword -AsPlainText} Else {$null})`\`" }
+    `\`"deployWebSearcherPlugin`\`": { `\`"value`\`": $(If ($DeployWebSearcherPlugin) {"true"} Else {"false"}) }
 }
 "
 

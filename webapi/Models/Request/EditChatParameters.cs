@@ -8,11 +8,6 @@ namespace CopilotChat.WebApi.Models.Request;
 public class EditChatParameters
 {
     /// <summary>
-    /// Chat ID that is persistent and unique.
-    /// </summary>
-    public string? Id { get; set; }
-
-    /// <summary>
     /// Title of the chat.
     /// </summary>
     public string? Title { get; set; }
@@ -27,5 +22,5 @@ public class EditChatParameters
     /// The higher this value, the more the system will rely on long term memory by lowering
     /// the relevance threshold of long term memory and increasing the threshold score of working memory.
     /// </summary>
-    public double? MemoryBalance { get; set; }
+    public float? MemoryBalance { get; set; }
 }

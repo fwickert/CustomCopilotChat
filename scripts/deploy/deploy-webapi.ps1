@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-Deploy CopilotChat's WebAPI to Azure
+Deploy Chat Copilot application to Azure
 #>
 
 param(
@@ -20,8 +20,19 @@ param(
     $DeploymentName,
 
     [string]
-    # CopilotChat WebApi package to deploy
-    $PackageFilePath = "$PSScriptRoot/out/webapi.zip"
+    # Name of the web app deployment slot
+    $DeploymentSlot,
+
+    [string]
+    $PackageFilePath = "$PSScriptRoot/out/webapi.zip",
+
+    [switch]
+    # Don't attempt to add our URIs in frontend app registration's redirect URIs
+    $SkipAppRegistration,
+    
+    [switch]
+    # Don't attempt to add our URIs in CORS origins for our plugins
+    $SkipCorsRegistration
 )
 
 # Ensure $PackageFilePath exists
@@ -38,26 +49,115 @@ if ($LASTEXITCODE -ne 0) {
 
 az account set -s $Subscription
 if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
+    exit $LASTEXITCODE
 }
 
 Write-Host "Getting Azure WebApp resource name..."
-$webappName=$(az deployment group show --name $DeploymentName --resource-group $ResourceGroupName --output json | ConvertFrom-Json).properties.outputs.webapiName.value
-if ($null -eq $webAppName) {
+$deployment=$(az deployment group show --name $DeploymentName --resource-group $ResourceGroupName --output json | ConvertFrom-Json)
+$webApiUrl = $deployment.properties.outputs.webapiUrl.value
+$webApiName = $deployment.properties.outputs.webapiName.value
+$pluginNames = $deployment.properties.outputs.pluginNames.value
+
+if ($null -eq $webApiName) {
     Write-Error "Could not get Azure WebApp resource name from deployment output."
     exit 1
 }
 
-Write-Host "Azure WebApp name: $webappName"
+Write-Host "Azure WebApp name: $webApiName"
 
 Write-Host "Configuring Azure WebApp to run from package..."
-az webapp config appsettings set --resource-group $ResourceGroupName --name $webappName --settings WEBSITE_RUN_FROM_PACKAGE="1" | out-null
+az webapp config appsettings set --resource-group $ResourceGroupName --name $webApiName --settings WEBSITE_RUN_FROM_PACKAGE="1" --output none
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
 
-Write-Host "Deploying '$PackageFilePath' to Azure WebApp '$webappName'..."
-az webapp deployment source config-zip --resource-group $ResourceGroupName --name $webappName --src $PackageFilePath
+# Set up deployment command as a string
+$azWebAppCommand = "az webapp deployment source config-zip --resource-group $ResourceGroupName --name $webApiName --src $PackageFilePath"
+
+# Check if DeploymentSlot parameter was passed
+$origins = @("$webApiUrl")
+if ($DeploymentSlot) {
+    Write-Host "Checking if slot $DeploymentSlot exists for '$webApiName'..."
+    $azWebAppCommand += " --slot $DeploymentSlot"
+    $slotInfo = az webapp deployment slot list --resource-group $ResourceGroupName --name $webApiName | ConvertFrom-JSON
+    $availableSlots = $slotInfo | Select-Object -Property Name
+    $origins = $slotInfo | Select-Object -Property defaultHostName
+    $slotExists = false
+
+    foreach ($slot in $availableSlots) { 
+        if ($slot.name -eq $DeploymentSlot) { 
+            # Deployment slot was found we dont need to create it
+            $slotExists = true
+        } 
+    }
+
+    # Web App deployment slot does not exist, create it
+    if (!$slotExists) {
+        Write-Host "Deployment slot $DeploymentSlot does not exist, creating..."
+        az webapp deployment slot create --slot $DeploymentSlot --resource-group $ResourceGroupName --name $webApiName --output none
+        $origins = az webapp deployment slot list --resource-group $ResourceGroupName --name $webApiName | ConvertFrom-JSON | Select-Object -Property defaultHostName
+    }
+}
+
+Write-Host "Deploying '$PackageFilePath' to Azure WebApp '$webApiName'..."
+
+# Invoke the command string
+Invoke-Expression $azWebAppCommand
 if ($LASTEXITCODE -ne 0) {
     exit $LASTEXITCODE
 }
+
+if (-Not $SkipAppRegistration) {
+    $webapiSettings = $(az webapp config appsettings list --name $webapiName --resource-group $ResourceGroupName | ConvertFrom-JSON)
+    $frontendClientId = ($webapiSettings | Where-Object -Property name -EQ -Value Frontend:AadClientId).value
+    $objectId = (az ad app show --id $frontendClientId | ConvertFrom-Json).id
+    $redirectUris = (az rest --method GET --uri "https://graph.microsoft.com/v1.0/applications/$objectId" --headers 'Content-Type=application/json' | ConvertFrom-Json).spa.redirectUris
+    $needToUpdateRegistration = $false
+
+    foreach ($address in $origins) {
+        $origin = "https://$address"
+        Write-Host "Ensuring '$origin' is included in AAD app registration's redirect URIs..."
+
+        if ($redirectUris -notcontains "$origin") {
+            $redirectUris += "$origin"
+            $needToUpdateRegistration = $true
+        }
+    }
+
+    if ($needToUpdateRegistration) {
+        $body = "{spa:{redirectUris:["
+        foreach ($uri in $redirectUris) {
+            $body += "'$uri',"
+        }
+        $body += "]}}"
+
+        az rest `
+            --method PATCH `
+            --uri "https://graph.microsoft.com/v1.0/applications/$objectId" `
+            --headers 'Content-Type=application/json' `
+            --body $body
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Failed to update AAD app registration - Use -SkipAppRegistration switch to skip this step"
+            exit $LASTEXITCODE
+        }
+    }
+}
+
+if (-Not $SkipCorsRegistration) {
+    foreach ($pluginName in $pluginNames) {
+        $allowedOrigins = $((az webapp cors show --name $pluginName --resource-group $ResourceGroupName --subscription $Subscription | ConvertFrom-Json).allowedOrigins)
+        foreach ($address in $origins) {
+            $origin = "https://$address"
+            Write-Host "Ensuring '$origin' is included in CORS origins for plugin '$pluginName'..."
+            if (-not $allowedOrigins -contains $origin) {
+                az webapp cors add --name $pluginName --resource-group $ResourceGroupName --subscription $Subscription --allowed-origins $origin
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Host "Failed to update plugin CORS URIs - Use -SkipCorsRegistration switch to skip this step"
+                    exit $LASTEXITCODE
+                }
+            }
+        }
+    }
+}
+
+Write-Host "To verify your deployment, go to 'https://$webApiUrl/' in your browser."

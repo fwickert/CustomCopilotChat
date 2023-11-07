@@ -35,16 +35,16 @@ public class BotResponsePrompt
     public string PastMemories { get; set; } = string.Empty;
 
     /// <summary>
-    /// Relevant additional knowledge extracted using a planner.
-    /// </summary>
-    [JsonPropertyName("externalInformation")]
-    public SemanticDependency<StepwiseThoughtProcess> ExternalInformation { get; set; }
-
-    /// <summary>
     /// Most recent messages from chat history.
     /// </summary>
     [JsonPropertyName("chatHistory")]
     public string ChatHistory { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Relevant additional knowledge extracted using a planner.
+    /// </summary>
+    [JsonPropertyName("externalInformation")]
+    public SemanticDependency<PlanExecutionMetadata> ExternalInformation { get; set; }
 
     /// <summary>
     /// The collection of context messages associated with this chat completions request.
@@ -54,23 +54,21 @@ public class BotResponsePrompt
     public ChatCompletionContextMessages MetaPromptTemplate { get; set; } = new();
 
     public BotResponsePrompt(
-        string systemDescription,
-        string systemResponse,
+        string systemInstructions,
         string audience,
         string userIntent,
         string chatMemories,
-        string documentMemories,
-        SemanticDependency<StepwiseThoughtProcess> externalInformation,
+        SemanticDependency<PlanExecutionMetadata> externalInformation,
         string chatHistory,
         ChatCompletionContextMessages metaPromptTemplate
     )
     {
-        this.SystemPersona = string.Join("\n", systemDescription, systemResponse);
+        this.SystemPersona = systemInstructions;
         this.Audience = audience;
         this.UserIntent = userIntent;
-        this.PastMemories = string.Join("\n", chatMemories, documentMemories).Trim();
-        this.ExternalInformation = externalInformation;
+        this.PastMemories = chatMemories;
         this.ChatHistory = chatHistory;
+        this.ExternalInformation = externalInformation;
         this.MetaPromptTemplate = metaPromptTemplate;
     }
 }
