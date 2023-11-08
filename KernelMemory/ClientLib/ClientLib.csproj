@@ -10,7 +10,7 @@
         <AnalysisLevel>latest</AnalysisLevel>
     </PropertyGroup>
 
-    <Import Project="../nuget/nuget-package.props" />
+   
 
     <ItemGroup>
         <PackageReference Include="System.Memory.Data" Version="7.0.0" />

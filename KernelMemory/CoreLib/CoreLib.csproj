@@ -10,7 +10,7 @@
         <IsPackable>true</IsPackable>
     </PropertyGroup>
 
-    <Import Project="../nuget/nuget-package.props" />
+   
 
     <ItemGroup>
         <PackageReference Include="Azure.AI.FormRecognizer" Version="4.1.0" />
