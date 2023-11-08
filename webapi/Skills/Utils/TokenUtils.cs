@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using Microsoft.DeepDev;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel.AI.ChatCompletion;
 using Microsoft.SemanticKernel.Connectors.AI.OpenAI.AzureSdk;
@@ -17,6 +18,11 @@ namespace CopilotChat.WebApi.Skills.Utils;
 /// </summary>
 public static class TokenUtils
 {
+    private static ITokenizer s_tokenizer;
+
+    //Add constructor
+    static TokenUtils() => s_tokenizer = TokenizerBuilder.CreateByEncoderNameAsync("cl100k_base").GetAwaiter().GetResult();
+
     /// <summary>
     /// Semantic dependencies of ChatSkill.
     ///  If you add a new semantic dependency, please add it here.
@@ -101,7 +107,10 @@ public static class TokenUtils
         //var tokenizer = SharpToken.GptEncoding.GetEncoding("cl100k_base");
         //var tokens = tokenizer.Encode(text);
         //return tokens.Count;
-        return 100;
+
+        var tokens = s_tokenizer.Encode(text, new HashSet<string>());
+        return tokens.Count;
+        //return 100;
     }
 
     /// <summary>
