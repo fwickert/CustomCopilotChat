@@ -19,6 +19,11 @@ public class ChatTokensUsage : IStorageEntity
     /// </summary>
     public string UserId { get; set; }
 
+    ///<summary>
+    /// user Name
+    /// </summary>
+    public string UserName { get; set; }
+
     /// <summary>
     /// Id of the chat this message belongs to.
     /// </summary>
@@ -32,7 +37,7 @@ public class ChatTokensUsage : IStorageEntity
     /// <summary>
     /// Counts of total token usage used to generate bot response.
     /// </summary>
-    public Dictionary<string, int>? TokenUsage { get; set; }
+    public IDictionary<string, int>? TokenUsage { get; set; }
 
     /// <summary>
     /// The partition key for the source.
@@ -40,10 +45,11 @@ public class ChatTokensUsage : IStorageEntity
     [JsonIgnore]
     public string Partition => this.ChatId;
 
-    public ChatTokensUsage(string id, string userId, string chatId, DateTimeOffset timestamp, Dictionary<string, int>? tokenUsage)
+    public ChatTokensUsage(string id, string userId, string userName, string chatId, DateTimeOffset timestamp, IDictionary<string, int>? tokenUsage)
     {
         this.Id = id;
         this.UserId = userId;
+        this.UserName = userName;
         this.ChatId = chatId;
         this.Timestamp = timestamp;
         this.TokenUsage = tokenUsage;

@@ -67,6 +67,11 @@ public class CustomChatSkill
     /// </summary>
     private readonly ChatSessionRepository _chatSessionRepository;
 
+    ///<summary>
+    ///A repository to save and retrieve chat token usage.
+    ///</summary>
+    private readonly ChatTokensUsageRepository _chatTokensUsageRepository;
+
     /// <summary>
     /// A SignalR hub context to broadcast updates of the execution.
     /// </summary>
@@ -100,6 +105,7 @@ public class CustomChatSkill
         IKernelMemory memoryClient,
         ChatMessageRepository chatMessageRepository,
         ChatSessionRepository chatSessionRepository,
+        ChatTokensUsageRepository chatTokensUsageRepository,
         IHubContext<MessageRelayHub> messageRelayHubContext,
         IOptions<PromptsOptions> promptOptions,
         IOptions<DocumentMemoryOptions> documentImportOptions,
@@ -112,6 +118,7 @@ public class CustomChatSkill
         this._memoryClient = memoryClient;
         this._chatMessageRepository = chatMessageRepository;
         this._chatSessionRepository = chatSessionRepository;
+        this._chatTokensUsageRepository = chatTokensUsageRepository;
         this._messageRelayHubContext = messageRelayHubContext;
         // Clone the prompt options to avoid modifying the original prompt options.
         this._promptOptions = promptOptions.Value.Copy();
@@ -339,7 +346,7 @@ public class CustomChatSkill
         var chatContext = context.Clone();
         chatContext.Variables.Set("knowledgeCutoff", this._promptOptions.KnowledgeCutoffDate);
 
-        ChatMessage chatMessage = await this.GetChatResponseAsync(chatId, userId, chatContext, newUserMessage, cancellationToken);
+        ChatMessage chatMessage = await this.GetChatResponseAsync(chatId, userId, userName, chatContext, newUserMessage, cancellationToken);
         context.Variables.Update(chatMessage.Content);
 
         if (chatMessage.TokenUsage != null)
@@ -482,7 +489,7 @@ public class CustomChatSkill
 
                 // Get bot response and stream to client
                 var promptView = new BotResponsePrompt(systemInstructions, "", deserializedPlan.UserIntent, "", plannerDetails, chatHistoryString, promptTemplate);
-                chatMessage = await this.HandleBotResponseAsync(chatId, userId, chatContext, promptView, cancellationToken);
+                chatMessage = await this.HandleBotResponseAsync(chatId, userId, userName, chatContext, promptView, cancellationToken);
 
                 if (chatMessage.TokenUsage != null)
                 {
@@ -526,11 +533,12 @@ public class CustomChatSkill
     /// </summary>
     /// <param name="chatId">The chat ID</param>
     /// <param name="userId">The user ID</param>
+    /// <param name="userName">The user name</param>
     /// <param name="chatContext">The SKContext.</param>
     /// <param name="userMessage">ChatMessage object representing new user message.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The created chat message containing the model-generated response.</returns>
-    private async Task<ChatMessage> GetChatResponseAsync(string chatId, string userId, SKContext chatContext, ChatMessage userMessage, CancellationToken cancellationToken)
+    private async Task<ChatMessage> GetChatResponseAsync(string chatId, string userId, string userName, SKContext chatContext, ChatMessage userMessage, CancellationToken cancellationToken)
     {
         // Render system instruction components and create the meta-prompt template
         var systemInstructions = await AsyncUtils.SafeInvokeAsync(
@@ -626,7 +634,7 @@ public class CustomChatSkill
         SemanticDependency<PlanExecutionMetadata> plannerDetails = new("");
         // Stream the response to the client
         var promptView = new BotResponsePrompt(systemInstructions, audience, userIntent, memoryText, plannerDetails, chatHistory, promptTemplate);
-        return await this.HandleBotResponseAsync(chatId, userId, chatContext, promptView, cancellationToken, citationMap.Values.AsEnumerable());
+        return await this.HandleBotResponseAsync(chatId, userId, userName, chatContext, promptView, cancellationToken, citationMap.Values.AsEnumerable());
     }
 
     /// <summary>
@@ -651,12 +659,14 @@ public class CustomChatSkill
     /// </summary>
     /// <param name="chatId">The chat ID</param>
     /// <param name="userId">The user ID</param>
+    /// <param name="userName">The user name</param>
     /// <param name="chatContext">Chat context.</param>
     /// <param name="promptView">The prompt view.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     private async Task<ChatMessage> HandleBotResponseAsync(
         string chatId,
         string userId,
+        string userName,
         SKContext chatContext,
         BotResponsePrompt promptView,
         CancellationToken cancellationToken,
@@ -707,6 +717,10 @@ public class CustomChatSkill
         await this.UpdateMessageOnClient(chatMessage, cancellationToken);
         await this._chatMessageRepository.UpsertAsync(chatMessage);
 
+        //CUSTOM : Upsert token usage
+        await this.UpdateBotResponseStatusOnClientAsync(chatId, "Saving token usage to chat history", cancellationToken);
+        ChatTokensUsage chatTokensUsage = new(chatMessage.Id, userId, userName, chatMessage.ChatId, chatMessage.Timestamp, chatMessage.TokenUsage);
+        await this._chatTokensUsageRepository.UpsertAsync(chatTokensUsage);
         return chatMessage;
     }
 
