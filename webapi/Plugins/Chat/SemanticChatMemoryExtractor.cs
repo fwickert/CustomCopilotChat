@@ -7,14 +7,14 @@ using System.Threading.Tasks;
 using CopilotChat.WebApi.Extensions;
 using CopilotChat.WebApi.Models.Request;
 using CopilotChat.WebApi.Options;
-using CopilotChat.WebApi.Skills.Utils;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.AI.TextCompletion;
 using Microsoft.SemanticKernel.Orchestration;
 using Microsoft.KernelMemory;
+using Microsoft.SemanticKernel.Connectors.AI.OpenAI;
+using CopilotChat.WebApi.Plugins.Utils;
 
-namespace CopilotChat.WebApi.Skills.ChatSkills;
+namespace CopilotChat.WebApi.Plugins.Chat;
 
 /// <summary>
 /// Helper class to extract and create semantic memory from chat history.
@@ -135,9 +135,9 @@ internal static class SemanticChatMemoryExtractor
     /// <summary>
     /// Create a completion settings object for chat response. Parameters are read from the PromptSettings class.
     /// </summary>
-    private static CompleteRequestSettings ToCompletionSettings(this PromptsOptions options)
+    private static OpenAIRequestSettings ToCompletionSettings(this PromptsOptions options)
     {
-        var completionSettings = new CompleteRequestSettings
+        var completionSettings = new OpenAIRequestSettings
         {
             MaxTokens = options.ResponseTokenLimit,
             Temperature = options.ResponseTemperature,

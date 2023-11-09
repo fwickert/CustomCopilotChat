@@ -117,9 +117,9 @@ export class ChatService extends BaseService {
         enabledPlugins?: Plugin[],
         processPlan = false,
     ): Promise<IAskResult> => {
-        // If skill requires any additional api properties, append to context
+        // If function requires any additional api properties, append to context
         if (enabledPlugins && enabledPlugins.length > 0) {
-            const openApiSkillVariables: IAskVariables[] = [];
+            const openApiVariables: IAskVariables[] = [];
 
             // List of custom plugins to append to context variables
             const customPlugins: ICustomPlugin[] = [];
@@ -136,7 +136,7 @@ export class ChatService extends BaseService {
                     });
                 }
 
-                // If skill requires any additional api properties, append to context variables
+                // If function requires any additional api properties, append to context variables
                 if (plugin.apiProperties) {
                     const apiProperties = plugin.apiProperties;
 
@@ -148,7 +148,7 @@ export class ChatService extends BaseService {
                         }
 
                         if (propertyDetails.value) {
-                            openApiSkillVariables.push({
+                            openApiVariables.push({
                                 key: `${property}`,
                                 value: propertyDetails.value,
                             });
@@ -158,13 +158,13 @@ export class ChatService extends BaseService {
             }
 
             if (customPlugins.length > 0) {
-                openApiSkillVariables.push({
+                openApiVariables.push({
                     key: `customPlugins`,
                     value: JSON.stringify(customPlugins),
                 });
             }
 
-            ask.variables = ask.variables ? ask.variables.concat(openApiSkillVariables) : openApiSkillVariables;
+            ask.variables = ask.variables ? ask.variables.concat(openApiVariables) : openApiVariables;
         }
 
         const chatId = ask.variables?.find((variable) => variable.key === 'chatId')?.value as string;

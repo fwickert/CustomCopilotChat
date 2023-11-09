@@ -30,11 +30,11 @@ public class AppInsightsTelemetryService : ITelemetryService
     }
 
     /// <inheritdoc/>
-    public void TrackSkillFunction(string skillName, string functionName, bool success)
+    public void TrackPluginFunction(string pluginName, string functionName, bool success)
     {
         var properties = new Dictionary<string, string>(this.BuildDefaultProperties())
         {
-            { "skillName", skillName },
+            { "pluginName", pluginName },
             { "functionName", functionName },
             { "success", success.ToString() },
         };

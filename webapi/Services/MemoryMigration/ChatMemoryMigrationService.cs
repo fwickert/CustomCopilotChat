@@ -45,9 +45,8 @@ public class ChatMemoryMigrationService : IChatMemoryMigrationService
         this._memoryClient = memoryClient;
         this._chatSessionRepository = chatSessionRepository;
         this._memorySourceRepository = memorySourceRepository;
-        this._globalIndex = documentMemoryOptions.Value.GlobalDocumentCollectionName;
-        var kernel = provider.GetMigrationKernel();
-        this._memory = kernel.Memory;
+        this._globalIndex = documentMemoryOptions.Value.GlobalDocumentCollectionName;        
+        this._memory = provider.GetMigrationMemory();
     }
 
     ///<inheritdoc/>
