@@ -69,18 +69,6 @@ public class KernelMemoryConfig
                 : Constants.DefaultPipeline.ToList();
         }
 
-        /// <summary>
-        /// Get steps without summary
-        /// </summary>
-        public List<string> GetWithoutSummaryStepsOrDefaults()
-        {
-            return (this.WithoutSummarySteps.Count > 0)
-                ? this.WithoutSummarySteps
-                : Constants.PipelineWithoutSummary.ToList();
-        }
-
-
-
     }
 
     /// <summary>

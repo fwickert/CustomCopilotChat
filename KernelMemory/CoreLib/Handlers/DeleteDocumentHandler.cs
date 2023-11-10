@@ -43,14 +43,14 @@ public class DeleteDocumentHandler : IPipelineStepHandler
         foreach (IVectorDb db in this._vectorDbs)
         {
             IAsyncEnumerable<MemoryRecord> records = db.GetListAsync(
-                indexName: pipeline.DocumentId,// pipeline.Index,
+                index: pipeline.DocumentId,// pipeline.Index,
                 limit: -1,
                 filters: new List<MemoryFilter> { MemoryFilters.ByDocument(pipeline.Index.Split("/")[0]) },
                 cancellationToken: cancellationToken);
 
             await foreach (var record in records.WithCancellation(cancellationToken))
             {
-                await db.DeleteAsync(indexName: pipeline.DocumentId, record, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await db.DeleteAsync(index: pipeline.DocumentId, record, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
         }
 

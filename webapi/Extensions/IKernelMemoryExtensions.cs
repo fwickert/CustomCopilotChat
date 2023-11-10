@@ -85,11 +85,7 @@ internal static class IKernelMemoryExtensions
         string? memoryName = null,
         CancellationToken cancellationToken = default)
     {
-        var filter =
-            new MemoryFilter
-            {
-                MinRelevance = relevanceThreshold,
-            };
+        var filter = new MemoryFilter();
 
         filter.ByTag(MemoryTags.TagChatId, chatId);
 
@@ -104,8 +100,9 @@ internal static class IKernelMemoryExtensions
                 indexName,
                 filter,
                 null,
+                0,
                 resultCount,
-                cancellationToken);
+                cancellationToken); ;
 
         return searchResult;
     }

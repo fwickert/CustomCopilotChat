@@ -3,10 +3,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.KernelMemory.MemoryStorage.Qdrant.Client.Http;
+using Microsoft.SemanticKernel.Diagnostics;
 using Npgsql;
 using NpgsqlTypes;
 using Pgvector;
@@ -52,6 +55,12 @@ public class PostgresDbClient : IPostgresDbClient
         }
     }
 
+    /// <inheritdoc />
+    public async Task<IEnumerable<string>> GetIndexesAsync(CancellationToken cancellationToken = default)
+    {   
+        return this.GetTablesAsync(cancellationToken).ToEnumerable();
+    }
+
     public async Task DeleteAsync(string tableName, string key, CancellationToken cancellationToken = default)
     {
         NpgsqlConnection connection = await this._dataSource.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
@@ -85,6 +94,7 @@ public class PostgresDbClient : IPostgresDbClient
             await cmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
     }
+
 
     public async Task DeleteTableAsync(string tableName, CancellationToken cancellationToken = default)
     {

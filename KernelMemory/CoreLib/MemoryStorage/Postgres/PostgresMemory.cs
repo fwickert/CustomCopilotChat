@@ -28,15 +28,23 @@ public class PostgresMemory : IVectorDb
         this._postgresDbClient = new PostgresDbClient(dataSourceBuilder.Build(), "public", config.VectorSize);
     }
 
-    public Task CreateIndexAsync(string indexName, int vectorSize, CancellationToken cancellationToken = default)
+    public Task CreateIndexAsync(string index, int vectorSize, CancellationToken cancellationToken = default)
     {
 
-        return this._postgresDbClient.CreateTableAsync(indexName, cancellationToken);
+        return this._postgresDbClient.CreateTableAsync(index, cancellationToken);
     }
 
-    public async Task DeleteAsync(string indexName, MemoryRecord record, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<IEnumerable<string>> GetIndexesAsync(CancellationToken cancellationToken = default)
     {
-        PostgresMemoryRecord existingRecord = await this._postgresDbClient.ReadAsync(indexName, record.Id, false, cancellationToken)
+        return await this._postgresDbClient
+            .GetIndexesAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task DeleteAsync(string index, MemoryRecord record, CancellationToken cancellationToken = default)
+    {
+        PostgresMemoryRecord existingRecord = await this._postgresDbClient.ReadAsync(index, record.Id, false, cancellationToken)
             .ConfigureAwait(false);
 
         if (existingRecord == null)
@@ -46,28 +54,28 @@ public class PostgresMemory : IVectorDb
         }
 
         this._log.LogTrace("Point ID {0} found, deleting...", existingRecord.Id);
-        await this._postgresDbClient.DeleteAsync(indexName, record.Id, cancellationToken)
+        await this._postgresDbClient.DeleteAsync(index, record.Id, cancellationToken)
             .ConfigureAwait(false);
     }
 
-    public Task DeleteIndexAsync(string indexName, CancellationToken cancellationToken = default)
+    public Task DeleteIndexAsync(string index, CancellationToken cancellationToken = default)
     {
-        if (string.Equals(indexName, Constants.DefaultIndex, StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(index, Constants.DefaultIndex, StringComparison.OrdinalIgnoreCase))
         {
             this._log.LogWarning("The default index cannot be deleted");
             return Task.CompletedTask;
         }
 
-        return this._postgresDbClient.DeleteTableAsync(indexName, cancellationToken);
+        return this._postgresDbClient.DeleteTableAsync(index, cancellationToken);
     }
 
-    public async IAsyncEnumerable<MemoryRecord> GetListAsync(string indexName, ICollection<MemoryFilter> filters = null, int limit = 1, bool withEmbeddings = false, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<MemoryRecord> GetListAsync(string index, ICollection<MemoryFilter> filters = null, int limit = 1, bool withEmbeddings = false, CancellationToken cancellationToken = default)
     {
         //On découpe l'indexname et on prend le 1er elément pour faire 
 
         if (limit <= 0) { limit = int.MaxValue; }
 
-        var result = this._postgresDbClient.GetListAsync(indexName, filters, limit, withEmbeddings, cancellationToken);
+        var result = this._postgresDbClient.GetListAsync(index, filters, limit, withEmbeddings, cancellationToken);
         IAsyncEnumerator<PostgresMemoryRecord> items = result.GetAsyncEnumerator();
 
         while (await items.MoveNextAsync())
@@ -83,13 +91,20 @@ public class PostgresMemory : IVectorDb
         }
     }
 
-    public async IAsyncEnumerable<(MemoryRecord, double)> GetSimilarListAsync(string indexName, Embedding embedding, int limit, double minRelevanceScore = 0, ICollection<MemoryFilter> filters = null, bool withEmbeddings = false, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<(MemoryRecord, double)> GetSimilarListAsync(
+        string index,
+        Embedding embedding,
+        ICollection<MemoryFilter> filters = null,
+        double minRelevance = 0,
+        int limit = 1,
+        bool withEmbeddings = false,
+        CancellationToken cancellationToken = default)
     {
 
         if (limit <= 0) { limit = int.MaxValue; }
 
         Pgvector.Vector vector = new(embedding.Data.ToArray());
-        var result = this._postgresDbClient.GetNearestMatchesAsync(indexName, filters, vector, limit, minRelevanceScore, withEmbeddings, cancellationToken);
+        var result = this._postgresDbClient.GetNearestMatchesAsync(index, filters, vector, limit, minRelevance, withEmbeddings, cancellationToken);
         IAsyncEnumerator<(PostgresMemoryRecord, double)> items = result.GetAsyncEnumerator();
 
         while (await items.MoveNextAsync())
@@ -107,13 +122,13 @@ public class PostgresMemory : IVectorDb
 
     }
 
-    public async Task<string> UpsertAsync(string indexName, MemoryRecord record, CancellationToken cancellationToken = default)
+    public async Task<string> UpsertAsync(string index, MemoryRecord record, CancellationToken cancellationToken = default)
     {
         string payload = JsonSerializer.Serialize(record.Payload, s_jsonOptions);
         string tags = JsonSerializer.Serialize(record.Tags, s_jsonOptions);
         Pgvector.Vector vector = new(record.Vector.Data.ToArray());
 
-        await this._postgresDbClient.UpsertAsync(indexName, record.Id, payload, tags, vector, DateTime.UtcNow, cancellationToken);
+        await this._postgresDbClient.UpsertAsync(index, record.Id, payload, tags, vector, DateTime.UtcNow, cancellationToken);
 
         return record.Id;
     }

@@ -90,8 +90,7 @@ public class ChatMemoryController : ControllerBase
             // Search if there is already a memory item that has a high similarity score with the new item.
             var filter = new MemoryFilter();
             filter.ByTag("chatid", chatId);
-            filter.ByTag("memory", memoryContainerName);
-            filter.MinRelevance = 0;
+            filter.ByTag("memory", memoryContainerName);            
 
             var searchResult =
                 await memoryClient.SearchMemoryAsync(

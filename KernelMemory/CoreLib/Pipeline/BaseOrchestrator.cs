@@ -22,7 +22,6 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator, IDisposable
     private readonly List<ITextEmbeddingGeneration> _embeddingGenerators;
     private readonly ITextGeneration _textGenerator;
     private readonly List<string> _defaultIngestionSteps;
-    private readonly List<string> _withoutSummaryIngestionSteps;
     private readonly IContentStorage _contentStorage;
     private readonly IMimeTypeDetection _mimeTypeDetection;
 
@@ -40,7 +39,6 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator, IDisposable
     {
         this.Log = log ?? DefaultLogger<BaseOrchestrator>.Instance;
         this._defaultIngestionSteps = (config ?? new KernelMemoryConfig()).DataIngestion.GetDefaultStepsOrDefaults();
-        this._withoutSummaryIngestionSteps = (config ?? new KernelMemoryConfig()).DataIngestion.GetWithoutSummaryStepsOrDefaults();
         this._contentStorage = contentStorage;
         this._embeddingGenerators = embeddingGenerators;
         this._vectorDbs = vectorDbs;
@@ -89,8 +87,7 @@ public abstract class BaseOrchestrator : IPipelineOrchestrator, IDisposable
         }
         else
         {
-            //foreach (var step in this._defaultIngestionSteps)
-            foreach (var step in this._withoutSummaryIngestionSteps)
+            foreach (var step in this._defaultIngestionSteps)            
             {
                 pipeline.Then(step);
             }
