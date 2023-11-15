@@ -43,7 +43,7 @@ public class ChatTokensUsage : IStorageEntity
     /// The partition key for the source.
     /// </summary>
     [JsonIgnore]
-    public string Partition => this.ChatId;
+    public string Partition => this.UserId;
 
     public ChatTokensUsage(string id, string userId, string userName, string chatId, DateTimeOffset timestamp, IDictionary<string, int>? tokenUsage)
     {
