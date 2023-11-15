@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using Microsoft.DeepDev;
+//using Microsoft.DeepDev;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.SemanticKernel.AI;
 using Microsoft.Extensions.Logging;
@@ -20,10 +20,11 @@ namespace CopilotChat.WebApi.Plugins.Utils;
 /// </summary>
 public static class TokenUtils
 {
-    private static ITokenizer s_tokenizer;
+    //private static ITokenizer s_tokenizer;
 
     //Add constructor
-    static TokenUtils() => s_tokenizer = TokenizerBuilder.CreateByEncoderNameAsync("cl100k_base").GetAwaiter().GetResult();
+    //static TokenUtils() => s_tokenizer = TokenizerBuilder.CreateByEncoderNameAsync("cl100k_base").GetAwaiter().GetResult();
+    private static SharpToken.GptEncoding tokenizer = SharpToken.GptEncoding.GetEncoding("cl100k_base");
 
     /// <summary>
     /// Semantic dependencies of ChatPlugin.
@@ -110,7 +111,8 @@ public static class TokenUtils
         //var tokens = tokenizer.Encode(text);
         //return tokens.Count;
 
-        var tokens = s_tokenizer.Encode(text, new HashSet<string>());
+        //var tokens = s_tokenizer.Encode(text, new HashSet<string>());
+        var tokens = tokenizer.Encode(text);
         return tokens.Count;
         //return 100;
     }

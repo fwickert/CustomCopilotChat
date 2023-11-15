@@ -26,6 +26,7 @@ using Microsoft.KernelMemory.Pipeline.Queue;
 using Microsoft.KernelMemory.Pipeline.Queue.AzureQueues;
 using Microsoft.KernelMemory.Pipeline.Queue.DevTools;
 using Microsoft.KernelMemory.Pipeline.Queue.RabbitMq;
+using Microsoft.KernelMemory.Prompts;
 using Microsoft.KernelMemory.Search;
 using Microsoft.SemanticKernel.AI.Embeddings;
 
@@ -108,10 +109,13 @@ public class KernelMemoryBuilder
         this.AddSingleton<List<ITextEmbeddingGeneration>>(this._embeddingGenerators);
         this.AddSingleton<List<IVectorDb>>(this._vectorDbs);
 
-        // Default configuration for tests and demos
-        this.WithDefaultMimeTypeDetection();
+        // Default configuration for tests and demos        
         this.WithSimpleFileStorage(new SimpleFileStorageConfig { StorageType = FileSystemTypes.Volatile });
         this.WithSimpleVectorDb(new SimpleVectorDbConfig { StorageType = FileSystemTypes.Volatile });
+
+        // Defulat dependencies, can be overridden
+        this.WithDefaultMimeTypeDetection();
+        this.WithDefaultPromptProvider();
     }
 
     public IKernelMemory Build()
@@ -335,6 +339,20 @@ public class KernelMemoryBuilder
         this.AddSingleton<IOcrEngine>(service);
         return this;
     }
+
+    public KernelMemoryBuilder WithDefaultPromptProvider()
+    {
+        this.AddSingleton<IPromptProvider, EmbeddedPromptProvider>();
+        return this;
+    }
+
+    public KernelMemoryBuilder WithCustomPromptProvider(IPromptProvider service)
+    {
+        service = service ?? throw new ConfigurationException("The prompt provider instance is NULL");
+        this.AddSingleton<IPromptProvider>(service);
+        return this;
+    }
+
 
     /// <summary>
     /// Allows to inject any dependency into the builder, e.g. options for handlers

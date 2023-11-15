@@ -60,4 +60,8 @@ public static class Constants
     // Pipeline steps
     public static readonly string[] DefaultPipeline = { "extract", "partition", "gen_embeddings", "save_embeddings" };
     public static readonly string[] PipelineWithSummary = { "extract", "partition", "gen_embeddings", "save_embeddings", "summarize", "gen_embeddings", "save_embeddings" };
+
+    // Standard prompt names
+    public const string PromptNamesSummarize = "summarize";
+    public const string PromptNamesAnswerWithFacts = "answer-with-facts";
 }
