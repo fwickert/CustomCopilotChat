@@ -21,7 +21,7 @@ public static class MimeTypes
     public const string ImagePng = "image/png";
     public const string ImageTiff = "image/tiff";
     public const string MsPowerpoint = "application/vnd.ms-powerpoint";
-    public const string MsExcel = "application/vnd.ms-excel";
+    public const string MsExcel = "application/msexcel";
 
 }
 
@@ -32,10 +32,8 @@ public static class FileExtensions
     public const string MarkDown = ".md";
     public const string MsWord = ".doc";
     public const string MsWordX = ".docx";
-    public const string MsPowerpoint = ".ppt";
-    public const string MsExcel = ".xls";
-    public const string MsPowerpointX = ".pptx";
-    public const string MsExcelX = ".xlsx";
+    public const string MsPowerpoint = ".pptx";
+    public const string MsExcel = ".xlsx";
     public const string Pdf = ".pdf";
     public const string WebPageUrl = ".url";
     public const string TextEmbeddingVector = ".text_embedding";
@@ -69,9 +67,7 @@ public class MimeTypesDetection : IMimeTypeDetection
             { FileExtensions.MsWord, MimeTypes.MsWord },
             { FileExtensions.MsWordX, MimeTypes.MsWord },
             { FileExtensions.MsPowerpoint, MimeTypes.MsPowerpoint },
-            { FileExtensions.MsPowerpointX, MimeTypes.MsPowerpoint },
             { FileExtensions.MsExcel, MimeTypes.MsExcel },
-            { FileExtensions.MsExcelX, MimeTypes.MsExcel },
             { FileExtensions.PlainText, MimeTypes.PlainText },
             { FileExtensions.Pdf, MimeTypes.Pdf },
             { FileExtensions.TextEmbeddingVector, MimeTypes.TextEmbeddingVector },

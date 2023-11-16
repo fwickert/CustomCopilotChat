@@ -152,7 +152,6 @@ public class TextExtractionHandler : IPipelineStepHandler
                 case MimeTypes.ImageTiff:
                 case MimeTypes.MsWord:
                 case MimeTypes.MsPowerpoint:
-                case MimeTypes.MsExcel:
                 case MimeTypes.Pdf:
                     this._log.LogDebug("Extracting text from image file {0}", uploadedFile.Name);
                     if (this._ocrEngine == null)
@@ -167,6 +166,13 @@ public class TextExtractionHandler : IPipelineStepHandler
 
                     break;
 
+                case MimeTypes.MsExcel:
+                    this._log.LogDebug("Extracting text from Excel file {0}", uploadedFile.Name);
+                    if (fileContent.ToArray().Length > 0)
+                    {
+                        text = new MsExcelDecoder().DocToText(fileContent);
+                    }
+                    break;
                 default:
                     skipFile = true;
                     uploadedFile.Log(this, $"File MIME type not supported: {uploadedFile.MimeType}. Ignoring the file.");
