@@ -121,7 +121,7 @@ internal static class IKernelMemoryExtensions
             new DocumentUploadRequest
             {
                 DocumentId = documentId,
-                Files = new List<DocumentUploadRequest.UploadedFile> { new DocumentUploadRequest.UploadedFile(fileName, fileContent) },
+                Files = new List<DocumentUploadRequest.UploadedFile> { new(fileName, fileContent) },
                 Index = indexName,
                 Steps = pipelineSteps,
             };
