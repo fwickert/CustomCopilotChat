@@ -96,8 +96,7 @@ public class ChatController : ControllerBase, IDisposable
     public async Task<IActionResult> ChatAsync(
         [FromServices] IKernel kernel,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
-        [FromServices] CopilotChatPlanner planner,
-        [FromServices] AskConverter askConverter,
+        [FromServices] CopilotChatPlanner planner,        
         [FromServices] ChatSessionRepository chatSessionRepository,
         [FromServices] ChatParticipantRepository chatParticipantRepository,
         [FromServices] IAuthInfo authInfo,
@@ -106,7 +105,7 @@ public class ChatController : ControllerBase, IDisposable
     {
         this._logger.LogDebug("Chat message received.");
 
-        return await this.HandleRequest(ChatFunctionName, kernel, messageRelayHubContext, planner, askConverter, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
+        return await this.HandleRequest(ChatFunctionName, kernel, messageRelayHubContext, planner, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
     }
 
     /// <summary>
@@ -132,8 +131,7 @@ public class ChatController : ControllerBase, IDisposable
     public async Task<IActionResult> ProcessPlanAsync(
         [FromServices] IKernel kernel,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
-        [FromServices] CopilotChatPlanner planner,
-        [FromServices] AskConverter askConverter,
+        [FromServices] CopilotChatPlanner planner,        
         [FromServices] ChatSessionRepository chatSessionRepository,
         [FromServices] ChatParticipantRepository chatParticipantRepository,
         [FromServices] IAuthInfo authInfo,
@@ -142,7 +140,7 @@ public class ChatController : ControllerBase, IDisposable
     {
         this._logger.LogDebug("plan request received.");
 
-        return await this.HandleRequest(ProcessPlanFunctionName, kernel, messageRelayHubContext, planner, askConverter, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
+        return await this.HandleRequest(ProcessPlanFunctionName, kernel, messageRelayHubContext, planner, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
     }
 
     /// <summary>
@@ -163,8 +161,7 @@ public class ChatController : ControllerBase, IDisposable
        string functionName,
        IKernel kernel,
        IHubContext<MessageRelayHub> messageRelayHubContext,
-       CopilotChatPlanner planner,
-       AskConverter askConverter,
+       CopilotChatPlanner planner,       
        ChatSessionRepository chatSessionRepository,
        ChatParticipantRepository chatParticipantRepository,
        IAuthInfo authInfo,
@@ -172,7 +169,7 @@ public class ChatController : ControllerBase, IDisposable
        string chatId)
     {
         // Put ask's variables in the context we will use.
-        var contextVariables = askConverter.GetContextVariables(ask);
+        var contextVariables = GetContextVariables(ask, authInfo, chatId);
 
         // Verify that the chat exists and that the user has access to it.
         ChatSession? chat = null;
@@ -403,6 +400,26 @@ public class ChatController : ControllerBase, IDisposable
         }
         return;
     }
+
+    private static ContextVariables GetContextVariables(Ask ask, IAuthInfo authInfo, string chatId)
+    {
+        const string UserIdKey = "userId";
+        const string UserNameKey = "userName";
+        const string ChatIdKey = "chatId";
+
+        var contextVariables = new ContextVariables(ask.Input);
+        foreach (var variable in ask.Variables)
+        {
+            contextVariables.Set(variable.Key, variable.Value);
+        }
+
+        contextVariables.Set(UserIdKey, authInfo.UserId);
+        contextVariables.Set(UserNameKey, authInfo.Name);
+        contextVariables.Set(ChatIdKey, chatId);
+
+        return contextVariables;
+    }
+
 
     /// <summary>
     /// Dispose of the object.

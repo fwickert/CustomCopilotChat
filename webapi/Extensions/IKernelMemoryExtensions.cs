@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
+using Microsoft.KernelMemory.MemoryStorage.Postgres;
 
 
 namespace CopilotChat.WebApi.Extensions;
@@ -52,6 +53,11 @@ internal static class IKernelMemoryExtensions
         }
         else
         {
+            //Turnoff defaultHandlers (form Deletedocument and formreco (model layouts with workadown)
+            //Add VectorDB postgres
+            //Warning new config format with searchclient, AzDocInt
+            //Addd custom pipeline
+
             if (hasOcr)
             {
                 memoryBuilder.WithCustomOcr(appBuilder.Configuration);
