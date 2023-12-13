@@ -57,6 +57,7 @@ internal static class IKernelMemoryExtensions
             //Add VectorDB postgres
             //Warning new config format with searchclient, AzDocInt
             //Addd custom pipeline
+            //BUT WE NEED SK RC3 BEFORE
 
             if (hasOcr)
             {
