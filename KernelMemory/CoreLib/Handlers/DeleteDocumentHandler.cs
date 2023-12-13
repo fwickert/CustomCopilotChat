@@ -51,7 +51,7 @@ public class DeleteDocumentHandler : IPipelineStepHandler
 
             await foreach (var record in records.WithCancellation(cancellationToken))
             {
-                await db.DeleteAsync(index: pipeline.DocumentId, record, cancellationToken: cancellationToken).ConfigureAwait(false);
+                await db.DeleteAsync(index: pipeline.Index, record, cancellationToken: cancellationToken).ConfigureAwait(false);
             }
         }
 
