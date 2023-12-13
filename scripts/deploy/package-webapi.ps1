@@ -10,7 +10,7 @@ param(
     
     [string]
     # .NET framework to publish.
-    $DotNetFramework = "net7.0",
+    $DotNetFramework = "net6.0",
     
     [string]
     # Target runtime to publish.

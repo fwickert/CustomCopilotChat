@@ -161,7 +161,7 @@ public class ChatController : ControllerBase, IDisposable
        string functionName,
        IKernel kernel,
        IHubContext<MessageRelayHub> messageRelayHubContext,
-       CopilotChatPlanner planner,       
+       CopilotChatPlanner planner,
        ChatSessionRepository chatSessionRepository,
        ChatParticipantRepository chatParticipantRepository,
        IAuthInfo authInfo,
