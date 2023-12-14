@@ -344,7 +344,7 @@ public class CustomChatPlugin
         // Clone the context to avoid modifying the original context variables.
         var chatContext = context.Clone();
         chatContext.Variables.Set("knowledgeCutoff", this._promptOptions.KnowledgeCutoffDate);
-
+                
         CopilotChatMessage chatMessage = await this.GetChatResponseAsync(chatId, userId, userName, chatContext, newUserMessage, cancellationToken);
         context.Variables.Update(chatMessage.Content);
 
@@ -356,7 +356,6 @@ public class CustomChatPlugin
         {
             this._logger.LogWarning("ChatSkill.ChatAsync token usage unknown. Ensure token management has been implemented correctly.");
         }
-
         return context;
     }
 
@@ -448,7 +447,7 @@ public class CustomChatPlugin
             chatHistoryString += "\n" + PromptUtils.FormatChatHistoryMessage(CopilotChatMessage.AuthorRoles.User, deserializedPlan.OriginalUserInput);
 
             // Add bot message proposal as prompt context message
-            chatContext.Variables.Set("planFunctions", this._externalInformationSkill.FormattedFunctionsString(deserializedPlan.Plan));            
+            chatContext.Variables.Set("planFunctions", this._externalInformationSkill.FormattedFunctionsString(deserializedPlan.Plan));
             var promptTemplateFactory = new BasicPromptTemplateFactory();
             var proposedPlanTemplate = promptTemplateFactory.Create(this._promptOptions.ProposedPlanBotMessage, new PromptTemplateConfig());
 

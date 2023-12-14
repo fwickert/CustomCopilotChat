@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Reflection;
 using System.Text.Json;
@@ -93,10 +94,11 @@ public class ChatController : ControllerBase, IDisposable
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ChatAsync(
         [FromServices] IKernel kernel,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
-        [FromServices] CopilotChatPlanner planner,        
+        [FromServices] CopilotChatPlanner planner,
         [FromServices] ChatSessionRepository chatSessionRepository,
         [FromServices] ChatParticipantRepository chatParticipantRepository,
         [FromServices] IAuthInfo authInfo,
@@ -104,8 +106,26 @@ public class ChatController : ControllerBase, IDisposable
         [FromRoute] Guid chatId)
     {
         this._logger.LogDebug("Chat message received.");
-
-        return await this.HandleRequest(ChatFunctionName, kernel, messageRelayHubContext, planner, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
+        try
+        {
+            return await this.HandleRequest(ChatFunctionName, kernel, messageRelayHubContext, planner, chatSessionRepository, chatParticipantRepository, authInfo, ask, chatId.ToString());
+        }
+        catch (SKException ex)
+        {
+            if (ex.InnerException is HttpOperationException httpEx)
+            {
+                if (httpEx.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    return this.StatusCode(429, "Too many request. Please try after few minutes...");
+                }
+                throw;
+            }
+            throw;
+        }
+        catch (Exception)
+        {
+            throw;
+        }
     }
 
     /// <summary>
@@ -128,10 +148,11 @@ public class ChatController : ControllerBase, IDisposable
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
     public async Task<IActionResult> ProcessPlanAsync(
         [FromServices] IKernel kernel,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
-        [FromServices] CopilotChatPlanner planner,        
+        [FromServices] CopilotChatPlanner planner,
         [FromServices] ChatSessionRepository chatSessionRepository,
         [FromServices] ChatParticipantRepository chatParticipantRepository,
         [FromServices] IAuthInfo authInfo,
