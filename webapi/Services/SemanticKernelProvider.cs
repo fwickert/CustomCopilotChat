@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using CopilotChat.WebApi.Options;
@@ -18,6 +19,7 @@ using Microsoft.SemanticKernel.Connectors.Memory.Postgres;
 using Microsoft.SemanticKernel.Connectors.Memory.Qdrant;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Memory;
+using Microsoft.SemanticKernel.Reliability.Basic;
 using Npgsql;
 using Pgvector.Npgsql;
 
@@ -67,6 +69,10 @@ public sealed class SemanticKernelProvider
 
         var memoryOptions = serviceProvider.GetRequiredService<IOptions<KernelMemoryConfig>>().Value;
 
+        var retryConfig = new BasicRetryConfig
+        { 
+            UseExponentialBackoff = true,
+        };
         switch (memoryOptions.TextGeneratorType)
         {
             case string x when x.Equals("AzureOpenAI", StringComparison.OrdinalIgnoreCase):
@@ -79,6 +85,8 @@ public sealed class SemanticKernelProvider
                     azureAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
 #pragma warning restore CA2000
+
+                retryConfig.MaxRetryCount = azureAIOptions.MaxRetries;
                 break;
 
             case string x when x.Equals("OpenAI", StringComparison.OrdinalIgnoreCase):
@@ -89,12 +97,16 @@ public sealed class SemanticKernelProvider
                     openAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
 #pragma warning restore CA2000
+                retryConfig.MaxRetryCount = openAIOptions.MaxRetries;
                 break;
 
             default:
                 throw new ArgumentException($"Invalid {nameof(memoryOptions.TextGeneratorType)} value in 'KernelMemory' settings.");
         }
 
+       
+        retryConfig.RetryableStatusCodes.Add(HttpStatusCode.TooManyRequests);
+        builder.WithRetryBasic(retryConfig);
         return builder;
     }
 
