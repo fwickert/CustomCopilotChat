@@ -4,12 +4,15 @@ using System;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
+using Azure.AI.OpenAI;
+using Azure.Core.Pipeline;
 using CopilotChat.WebApi.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
+using Microsoft.KernelMemory.AI;
 using Microsoft.KernelMemory.MemoryStorage.Postgres;
 using Microsoft.KernelMemory.MemoryStorage.Qdrant;
 using Microsoft.SemanticKernel;
@@ -17,11 +20,13 @@ using Microsoft.SemanticKernel.Connectors.AI.OpenAI;
 using Microsoft.SemanticKernel.Connectors.Memory.AzureCognitiveSearch;
 using Microsoft.SemanticKernel.Connectors.Memory.Postgres;
 using Microsoft.SemanticKernel.Connectors.Memory.Qdrant;
+using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Memory;
 using Microsoft.SemanticKernel.Plugins.Memory;
 using Microsoft.SemanticKernel.Reliability.Basic;
 using Npgsql;
 using Pgvector.Npgsql;
+using static CopilotChat.WebApi.Options.ChatAuthenticationOptions;
 
 namespace CopilotChat.WebApi.Services;
 
@@ -70,9 +75,10 @@ public sealed class SemanticKernelProvider
         var memoryOptions = serviceProvider.GetRequiredService<IOptions<KernelMemoryConfig>>().Value;
 
         var retryConfig = new BasicRetryConfig
-        { 
+        {
             UseExponentialBackoff = true,
         };
+
         switch (memoryOptions.TextGeneratorType)
         {
             case string x when x.Equals("AzureOpenAI", StringComparison.OrdinalIgnoreCase):
@@ -84,8 +90,7 @@ public sealed class SemanticKernelProvider
                     azureAIOptions.Endpoint,
                     azureAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
-#pragma warning restore CA2000
-
+#pragma warning restore CA2000                
                 retryConfig.MaxRetryCount = azureAIOptions.MaxRetries;
                 break;
 
@@ -103,8 +108,7 @@ public sealed class SemanticKernelProvider
             default:
                 throw new ArgumentException($"Invalid {nameof(memoryOptions.TextGeneratorType)} value in 'KernelMemory' settings.");
         }
-
-       
+        retryConfig.RetryableExceptionTypes.Add(typeof(HttpOperationException));
         retryConfig.RetryableStatusCodes.Add(HttpStatusCode.TooManyRequests);
         builder.WithRetryBasic(retryConfig);
         return builder;

@@ -6,12 +6,15 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure;
 using Azure.AI.DocumentIntelligence;
+using Azure.Core;
+
 //using Azure.AI.FormRecognizer.DocumentAnalysis;
 using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Microsoft.KernelMemory.Configuration;
 using Microsoft.KernelMemory.Diagnostics;
 using Microsoft.KernelMemory.FileSystem.DevTools;
+using Microsoft.SemanticKernel.Diagnostics;
 
 namespace Microsoft.KernelMemory.DataFormats.Image.AzureFormRecognizer;
 
@@ -35,28 +38,41 @@ public class AzureFormRecognizerEngine : IOcrEngine
     {
         this._log = log ?? DefaultLogger<AzureFormRecognizerEngine>.Instance;
 
+        AzureAIDocumentIntelligenceClientOptions options = new()
+        {
+            Retry =
+            {
+                Delay = TimeSpan.FromSeconds(2),
+                MaxDelay = TimeSpan.FromSeconds(16),
+                MaxRetries = 10,
+                Mode = RetryMode.Fixed
+            },
+            Diagnostics = { IsLoggingContentEnabled = true }
+        };
+
         switch (config.Auth)
         {
             case AzureFormRecognizerConfig.AuthTypes.AzureIdentity:
                 //this._recognizerClient = new DocumentAnalysisClient(new Uri(config.Endpoint), new DefaultAzureCredential());
-                this._documentIntelligenceClient = new DocumentIntelligenceClient(new Uri(config.Endpoint), new DefaultAzureCredential());
+                this._documentIntelligenceClient = new DocumentIntelligenceClient(new Uri(config.Endpoint), new DefaultAzureCredential(), options);
                 break;
 
             case AzureFormRecognizerConfig.AuthTypes.APIKey:
                 if (string.IsNullOrEmpty(config.APIKey))
                 {
-                    this._log.LogCritical("Azure Form Recognizer API key is empty");
-                    throw new ConfigurationException("Azure Form Recognizer API key is empty");
+                    this._log.LogCritical("Document Intelligent Service API key is empty");
+                    throw new ConfigurationException("Document Intelligent Service API key is empty");
                 }
 
                 //this._recognizerClient = new DocumentAnalysisClient(new Uri(config.Endpoint), new AzureKeyCredential(config.APIKey));
-                this._documentIntelligenceClient = new DocumentIntelligenceClient(new Uri(config.Endpoint), new AzureKeyCredential(config.APIKey));
+                this._documentIntelligenceClient = new DocumentIntelligenceClient(new Uri(config.Endpoint), new AzureKeyCredential(config.APIKey), options);
                 break;
 
             default:
-                this._log.LogCritical("Azure Form Recognizer authentication type '{0}' undefined or not supported", config.Auth);
-                throw new ConfigurationException($"Azure Form Recognizer authentication type '{config.Auth}' undefined or not supported");
+                this._log.LogCritical("Document Intelligent Service authentication type '{0}' undefined or not supported", config.Auth);
+                throw new ConfigurationException($"Document Intelligent Service authentication type '{config.Auth}' undefined or not supported");
         }
+
     }
 
     ///<inheritdoc/>
@@ -70,79 +86,24 @@ public class AzureFormRecognizerEngine : IOcrEngine
             Base64Source = new BinaryData(imageContent.ReadAllBytes())
         };
 
-        
-        
+        try
+        {
+            var operation = await this._documentIntelligenceClient.AnalyzeDocumentAsync
+          (WaitUntil.Completed, "prebuilt-layout", content, null, null, null, null, null,
+          ContentFormat.Markdown, cancellationToken: cancellationToken).ConfigureAwait(false);
 
-        var operation = await this._documentIntelligenceClient.AnalyzeDocumentAsync
-            (WaitUntil.Completed, "prebuilt-layout", content, null, null, null, null, null,
-            ContentFormat.Markdown,cancellationToken: cancellationToken).ConfigureAwait(false);
+            // Wait for the result
+            Response<AnalyzeResult> operationResponse = await operation.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
 
-
-        // Wait for the result
-        Response<AnalyzeResult> operationResponse = await operation.WaitForCompletionAsync(cancellationToken).ConfigureAwait(false);
-
-        //Le Value.content n'est pas structuré. Alors on va prendre les KeyValuesPairs + Paragraphs + Tables pour structurer
-        // Exemple de structure : Informations de devis, Le devis, autres informations
-
-        //StringBuilder stringBuilder = new StringBuilder();
-        //stringBuilder.AppendLine("[START Informations de devis]");
-
-        //foreach (AnalyzedDocument doc in operation.Value.Documents)
-        //{
-        //    foreach (KeyValuePair<string, DocumentField> field in doc.Fields)
-        //    {
-        //        switch (field.Value.FieldType)
-        //        {
-        //            case DocumentFieldType.List:
-        //                foreach (DocumentField item in field.Value.Value.AsList())
-        //                {
-        //                    stringBuilder.AppendLine("Items: ");
-        //                    if (item.FieldType == DocumentFieldType.Dictionary)
-        //                    {
-        //                        foreach (KeyValuePair<string, DocumentField> itemField in item.Value.AsDictionary())
-        //                        {
-        //                            if (itemField.Value.FieldType == DocumentFieldType.String)
-        //                            {
-        //                                stringBuilder.AppendLine($"{itemField.Key} : {itemField.Value.Content}");
-        //                            }
-        //                            if (itemField.Value.FieldType == DocumentFieldType.Currency)
-        //                            {
-        //                                CurrencyValue itemAmount = itemField.Value.Value.AsCurrency();
-        //                                stringBuilder.AppendLine($"{itemField.Key} : {itemAmount.Symbol}{itemAmount.Amount}");
-        //                            }
-        //                        }
-        //                    }
-        //                    else
-        //                    {
-        //                        stringBuilder.AppendLine($"{item.Content}");
-        //                    }
-        //                }
-        //                break;
-        //            default:
-        //                stringBuilder.AppendLine($"{field.Key} : {field.Value.Content}");
-        //                break;
-        //        }
-
-        //    }
-
-        //    stringBuilder.AppendLine("[END Informations de devis]");
-
-
-        //    foreach (DocumentTable table in operation.Value.Tables)
-        //    {
-        //        stringBuilder.AppendLine("[START Table]");
-        //        foreach (DocumentTableCell cell in table.Cells)
-        //        {
-        //            stringBuilder.AppendLine($"[C{cell.ColumnIndex}:R{cell.RowIndex}]={cell.Content}");
-        //        }
-        //        stringBuilder.AppendLine("[END Table]");
-        //    }
-        //}
-
-
-
-
-        return operationResponse.Value.Content;
-        //return stringBuilder.ToString(); ;
+            return operationResponse.Value.Content;
+        }
+        catch (RequestFailedException e) when (e.Status == 429)
+        {
+            throw (new HttpOperationException("Document Intelligent Service is busy, please try again later", e));
+        }
+        catch (Exception e)
+        {
+            throw e;
+        }
     }
 }

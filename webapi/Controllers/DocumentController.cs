@@ -21,6 +21,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
+using Microsoft.SemanticKernel.Diagnostics;
 
 namespace CopilotChat.WebApi.Controllers;
 
@@ -85,18 +86,31 @@ public class DocumentController : ControllerBase
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public Task<IActionResult> DocumentImportAsync(
+    [ProducesResponseType(StatusCodes.Status429TooManyRequests)]
+    public async Task<IActionResult> DocumentImportAsync(
         [FromServices] IKernelMemory memoryClient,
         [FromServices] IHubContext<MessageRelayHub> messageRelayHubContext,
         [FromForm] DocumentImportForm documentImportForm)
     {
-        return this.DocumentImportAsync(
-            memoryClient,
-            messageRelayHubContext,
-            DocumentScopes.Global,
-            DocumentMemoryOptions.GlobalDocumentChatId,
-            documentImportForm
-        );
+        try
+        {
+            return await this.DocumentImportAsync(
+             memoryClient,
+             messageRelayHubContext,
+             DocumentScopes.Global,
+             DocumentMemoryOptions.GlobalDocumentChatId,
+             documentImportForm
+         );
+        }
+        catch (HttpOperationException ex)
+        {
+            if (ex.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+            {
+                return this.StatusCode(429, "Too many request. Please try after few minutes...");
+            }
+            throw;
+        }
+
     }
 
     /// <summary>

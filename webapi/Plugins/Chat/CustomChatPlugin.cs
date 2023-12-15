@@ -344,7 +344,7 @@ public class CustomChatPlugin
         // Clone the context to avoid modifying the original context variables.
         var chatContext = context.Clone();
         chatContext.Variables.Set("knowledgeCutoff", this._promptOptions.KnowledgeCutoffDate);
-                
+
         CopilotChatMessage chatMessage = await this.GetChatResponseAsync(chatId, userId, userName, chatContext, newUserMessage, cancellationToken);
         context.Variables.Update(chatMessage.Content);
 
