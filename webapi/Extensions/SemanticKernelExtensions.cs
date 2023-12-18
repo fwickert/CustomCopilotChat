@@ -22,6 +22,7 @@ using Microsoft.SemanticKernel.Diagnostics;
 using Microsoft.SemanticKernel.Plugins.Core;
 using Microsoft.KernelMemory;
 using System.Net.Http;
+using System.Collections.Generic;
 
 namespace CopilotChat.WebApi.Extensions;
 
@@ -77,6 +78,34 @@ internal static class SemanticKernelExtensions
         // Add any additional setup needed for the kernel.
         // Uncomment the following line and pass in a custom hook for any complimentary setup of the kernel.
         // builder.Services.AddKernelSetupHook(customHook);
+
+        return builder;
+    }
+
+    public static WebApplicationBuilder AddSpareServices(this WebApplicationBuilder builder)
+    {
+        //Add provider
+        builder.InitializeKernelProvider();
+
+        builder.Services.AddScoped<SpareKernels>(
+           sp =>
+           {
+               SpareKernels spareKernels = new();
+               var provider = sp.GetRequiredService<SemanticKernelProvider>();
+               List<KernelBuilder> kernels = provider.SpareServices();
+               foreach (KernelBuilder item in kernels)
+               {
+                   var kernel = item.Build();
+                   sp.GetRequiredService<RegisterFunctionsWithKernel>()(sp, kernel);
+                   // If KernelSetupHook is not null, invoke custom kernel setup.
+                   sp.GetService<KernelSetupHook>()?.Invoke(sp, kernel);
+                   spareKernels.Kernels.Add(kernel);
+               }
+               return spareKernels;
+           });
+
+        // Register plugins
+        builder.Services.AddScoped<RegisterFunctionsWithKernel>(sp => RegisterChatCopilotFunctionsAsync);
 
         return builder;
     }
@@ -166,6 +195,19 @@ internal static class SemanticKernelExtensions
                 logger: sp.GetRequiredService<ILogger<CustomChatPlugin>>()),
             nameof(CustomChatPlugin));
 
+        //kernel.ImportFunctions(
+        //  new ChatPlugin(
+        //      kernel,
+        //      memoryClient: sp.GetRequiredService<IKernelMemory>(),
+        //      chatMessageRepository: sp.GetRequiredService<ChatMessageRepository>(),
+        //      chatSessionRepository: sp.GetRequiredService<ChatSessionRepository>(),              
+        //      messageRelayHubContext: sp.GetRequiredService<IHubContext<MessageRelayHub>>(),
+        //      promptOptions: sp.GetRequiredService<IOptions<PromptsOptions>>(),
+        //      documentImportOptions: sp.GetRequiredService<IOptions<DocumentMemoryOptions>>(),
+        //      contentSafety: sp.GetService<AzureContentSafety>(),
+        //      planner: sp.GetRequiredService<CopilotChatPlanner>(),
+        //      logger: sp.GetRequiredService<ILogger<CustomChatPlugin>>()),
+        //  nameof(ChatPlugin));
         return kernel;
     }
 

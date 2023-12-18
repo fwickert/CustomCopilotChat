@@ -43,7 +43,7 @@ public sealed class Program
             .AddSingleton<ILogger>(sp => sp.GetRequiredService<ILogger<Program>>()) // some services require an un-templated ILogger
             .AddOptions(builder.Configuration)
             .AddPersistentChatStore()
-            .AddPlugins(builder.Configuration)            
+            .AddPlugins(builder.Configuration)
             .AddChatCopilotAuthentication(builder.Configuration)
             .AddChatCopilotAuthorization();
 
@@ -51,6 +51,7 @@ public sealed class Program
         builder
             .AddBotConfig()
             .AddSemanticKernelServices()
+            .AddSpareServices()
             .AddPlannerServices()
             .AddKernelMemoryServices();
 

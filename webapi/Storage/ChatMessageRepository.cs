@@ -29,6 +29,7 @@ public class ChatMessageRepository : Repository<CopilotChatMessage>
     public Task<IEnumerable<CopilotChatMessage>> FindByChatIdAsync(string chatId)
     {
         return base.StorageContext.QueryEntitiesAsync(e => e.ChatId == chatId);
+        
     }
 
     /// <summary>

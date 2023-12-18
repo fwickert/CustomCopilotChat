@@ -1,18 +1,16 @@
 ﻿// Copyright (c) Microsoft. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
-using Azure.AI.OpenAI;
-using Azure.Core.Pipeline;
 using CopilotChat.WebApi.Options;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Microsoft.KernelMemory;
-using Microsoft.KernelMemory.AI;
 using Microsoft.KernelMemory.MemoryStorage.Postgres;
 using Microsoft.KernelMemory.MemoryStorage.Qdrant;
 using Microsoft.SemanticKernel;
@@ -26,7 +24,7 @@ using Microsoft.SemanticKernel.Plugins.Memory;
 using Microsoft.SemanticKernel.Reliability.Basic;
 using Npgsql;
 using Pgvector.Npgsql;
-using static CopilotChat.WebApi.Options.ChatAuthenticationOptions;
+
 
 namespace CopilotChat.WebApi.Services;
 
@@ -39,6 +37,7 @@ public sealed class SemanticKernelProvider
 
     private readonly KernelBuilder _builderChat;
     private readonly KernelBuilder _builderPlanner;
+    private readonly List<KernelBuilder> _builderSpareServices;
     private readonly MemoryBuilder _builderMemory;
 
     public SemanticKernelProvider(IServiceProvider serviceProvider, IConfiguration configuration, IHttpClientFactory httpClientFactory)
@@ -46,6 +45,7 @@ public sealed class SemanticKernelProvider
         this._builderChat = InitializeCompletionKernel(serviceProvider, configuration, httpClientFactory);
         this._builderPlanner = InitializePlannerKernel(serviceProvider, configuration, httpClientFactory);
         this._builderMemory = InitializeMigrationMemory(serviceProvider, configuration, httpClientFactory);
+        this._builderSpareServices = InitializeSpareServices(serviceProvider, configuration, httpClientFactory);
     }
 
     /// <summary>
@@ -62,6 +62,12 @@ public sealed class SemanticKernelProvider
     /// Produce semantic-kernel with kernel memory.
     /// </summary>
     public ISemanticTextMemory GetMigrationMemory() => this._builderMemory.Build();
+
+    /// <summary>
+    /// Produce Spares services with only completion services for chat.
+    /// </summary>
+    public List<KernelBuilder> SpareServices() => this._builderSpareServices;
+
 
     private static KernelBuilder InitializeCompletionKernel(
         IServiceProvider serviceProvider,
@@ -180,7 +186,7 @@ public sealed class SemanticKernelProvider
                     azureAIOptions.Endpoint,
                     azureAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
-#pragma warning restore CA2000
+#pragma warning restore CA2000                
                 break;
 
             case string x when x.Equals("OpenAI", StringComparison.OrdinalIgnoreCase):
@@ -190,12 +196,13 @@ public sealed class SemanticKernelProvider
                     openAIOptions.EmbeddingModel,
                     openAIOptions.APIKey,
                     httpClient: httpClientFactory.CreateClient());
-#pragma warning restore CA2000
+#pragma warning restore CA2000                
                 break;
 
             default:
                 throw new ArgumentException($"Invalid {nameof(memoryOptions.Retrieval.EmbeddingGeneratorType)} value in 'KernelMemory' settings.");
         }
+
         return builder;
 
         IMemoryStore CreateMemoryStore()
@@ -206,10 +213,8 @@ public sealed class SemanticKernelProvider
                     // Maintain single instance of volatile memory.
                     Interlocked.CompareExchange(ref _volatileMemoryStore, new VolatileMemoryStore(), null);
                     return _volatileMemoryStore;
-
                 case string x when x.Equals("Qdrant", StringComparison.OrdinalIgnoreCase):
                     var qdrantConfig = memoryOptions.GetServiceConfig<QdrantConfig>(configuration, "Qdrant");
-
 #pragma warning disable CA2000 // Ownership passed to QdrantMemoryStore
                     HttpClient httpClient = new(new HttpClientHandler { CheckCertificateRevocationList = true });
 #pragma warning restore CA2000 // Ownership passed to QdrantMemoryStore
@@ -217,7 +222,6 @@ public sealed class SemanticKernelProvider
                     {
                         httpClient.DefaultRequestHeaders.Add("api-key", qdrantConfig.APIKey);
                     }
-
                     return
                         new QdrantMemoryStore(
                             httpClient: httpClient,
@@ -228,16 +232,58 @@ public sealed class SemanticKernelProvider
                 case string x when x.Equals("AzureCognitiveSearch", StringComparison.OrdinalIgnoreCase):
                     var acsConfig = memoryOptions.GetServiceConfig<AzureCognitiveSearchConfig>(configuration, "AzureCognitiveSearch");
                     return new AzureCognitiveSearchMemoryStore(acsConfig.Endpoint, acsConfig.APIKey);
-
                 case string x when x.Equals("Postgres", StringComparison.OrdinalIgnoreCase):
                     var postgresConfig = memoryOptions.GetServiceConfig<PostgresConfig>(configuration, "Postgres");
                     var dataSourceBuilder = new NpgsqlDataSourceBuilder(postgresConfig.ConnectionString);
                     dataSourceBuilder.UseVector();
-                    return new PostgresMemoryStore(dataSource: dataSourceBuilder.Build(), vectorSize: postgresConfig.VectorSize
-                        );
+                    return new PostgresMemoryStore(dataSource: dataSourceBuilder.Build(),
+                        vectorSize: postgresConfig.VectorSize);
                 default:
                     throw new InvalidOperationException($"Invalid 'VectorDbType' type '{memoryOptions.Retrieval.VectorDbType}'.");
             }
         }
+    }
+
+    private static List<KernelBuilder> InitializeSpareServices(
+        IServiceProvider serviceProvider,
+        IConfiguration configuration,
+        IHttpClientFactory httpClientFactory)
+    {
+        List<KernelBuilder> spareServices = new();
+
+        //Read config file and iterate all spare services
+        //memoryOptions.GetServiceConfig<AzureOpenAIConfig>(configuration, "AzureOpenAIText");
+        AzureOpenAISpareServicesOptions azureOpenAISpareServices = serviceProvider.GetRequiredService<IOptions<AzureOpenAISpareServicesOptions>>().Value;
+        azureOpenAISpareServices.SpareServices = azureOpenAISpareServices.GetServiceConfig<List<SpareService>>(configuration, "AzureOpenAI")!;
+
+        if (azureOpenAISpareServices.Activate)
+        {
+            foreach (var spareService in azureOpenAISpareServices.SpareServices!)
+            {
+                if (spareService.Activate)
+                {
+                    var retryConfig = new BasicRetryConfig
+                    {
+                        UseExponentialBackoff = true,
+                    };
+
+                    //Add kernel with param
+
+                    var builder = new KernelBuilder();
+                    builder.WithLoggerFactory(serviceProvider.GetRequiredService<ILoggerFactory>());
+                    builder.WithAzureOpenAIChatCompletionService(
+                      spareService.Deployment,
+                      spareService.Endpoint,
+                      spareService.APIKey,
+                      httpClient: httpClientFactory.CreateClient());
+                    //builder.Build();
+
+                    spareServices.Add(builder);
+
+                }
+            }
+        }
+
+        return spareServices;
     }
 }

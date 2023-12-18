@@ -779,6 +779,29 @@ public class CustomChatPlugin
             : await this._externalInformationSkill.InvokePlannerAsync(userIntent, planContext, cancellationToken);
     }
 
+    private async Task<CopilotChatMessage> GetChatMessageAsync(string message, string userId, string userName, string chatId, string type, CancellationToken cancellationToken)
+    {
+        if (!await this._chatSessionRepository.TryFindByIdAsync(chatId))
+        {
+            throw new ArgumentException("Chat session does not exist.");
+        }
+
+        var chatMessage = new CopilotChatMessage(
+          userId,
+          userName,
+          chatId,
+          message,
+          string.Empty,
+          null,
+          CopilotChatMessage.AuthorRoles.User,
+          // Default to a standard message if the `type` is not recognized
+          Enum.TryParse(type, out CopilotChatMessage.ChatMessageType typeAsEnum) && Enum.IsDefined(typeof(CopilotChatMessage.ChatMessageType), typeAsEnum)
+              ? typeAsEnum
+              : CopilotChatMessage.ChatMessageType.Message);
+        return chatMessage;
+    }
+
+
     /// <summary>
     /// Save a new message to the chat history.
     /// </summary>

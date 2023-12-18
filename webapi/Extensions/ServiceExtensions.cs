@@ -60,6 +60,8 @@ public static class CopilotChatServiceExtensions
 
         AddOptions<KernelMemoryConfig>(MemoryConfiguration.KernelMemorySection);
 
+        AddOptions<AzureOpenAISpareServicesOptions>(AzureOpenAISpareServicesConfiguration.AzureOpenAISpareServicesSection);
+
         AddOptions<FrontendOptions>(FrontendOptions.PropertyName);
 
         return services;
