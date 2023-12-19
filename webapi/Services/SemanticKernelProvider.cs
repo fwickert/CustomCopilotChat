@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -258,29 +259,24 @@ public sealed class SemanticKernelProvider
 
         if (azureOpenAISpareServices.Activate)
         {
-            foreach (var spareService in azureOpenAISpareServices.SpareServices!)
+            foreach (var spareService in azureOpenAISpareServices.SpareServices.Where(q => q.Activate))
             {
-                if (spareService.Activate)
+                var retryConfig = new BasicRetryConfig
                 {
-                    var retryConfig = new BasicRetryConfig
-                    {
-                        UseExponentialBackoff = true,
-                    };
+                    UseExponentialBackoff = true,
+                };
 
-                    //Add kernel with param
+                //Add kernel with param
 
-                    var builder = new KernelBuilder();
-                    builder.WithLoggerFactory(serviceProvider.GetRequiredService<ILoggerFactory>());
-                    builder.WithAzureOpenAIChatCompletionService(
-                      spareService.Deployment,
-                      spareService.Endpoint,
-                      spareService.APIKey,
-                      httpClient: httpClientFactory.CreateClient());
-                    //builder.Build();
+                var builder = new KernelBuilder();
+                builder.WithLoggerFactory(serviceProvider.GetRequiredService<ILoggerFactory>());
+                builder.WithAzureOpenAIChatCompletionService(
+                  spareService.Deployment,
+                  spareService.Endpoint,
+                  spareService.APIKey,
+                  httpClient: httpClientFactory.CreateClient());
 
-                    spareServices.Add(builder);
-
-                }
+                spareServices.Add(builder);
             }
         }
 
